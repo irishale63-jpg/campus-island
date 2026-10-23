@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { accounts, seedData } from './lib/seed.mjs';
+import { launchAddress } from './lib/local-address.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const knownAccounts = new Map(accounts.map(u => [u.id, u]));
@@ -221,8 +222,8 @@ export function createApp({ dataFile = resolve(ROOT, 'data/store.json'), demo = 
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT || 3000);
+  const { port, host, url, lan } = launchAddress();
   const server = createApp({ dataFile: process.env.DATA_FILE ? resolve(process.env.DATA_FILE) : undefined, demo: process.env.DEMO_MODE !== 'false' });
-  server.listen(port, '127.0.0.1', () => console.log(`善意同行已启动：http://127.0.0.1:${port}\n按 Ctrl+C 停止。数据保存在本项目 data 文件夹。`));
+  server.listen(port, host, () => console.log(`善意同行已启动：${url}\n${lan ? '手机与电脑连接同一 Wi-Fi 后，可访问上面的地址。\n' : ''}按 Ctrl+C 停止。数据保存在本项目 data 文件夹。`));
   server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? '端口已被占用，请关闭旧服务或更换 PORT。' : e.message); process.exitCode = 1; });
 }
