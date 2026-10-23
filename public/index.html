@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#285847">
+  <meta name="description" content="善意同行，让校园里的小需求被看见。一起学习，借一把伞，给身边的同学一点帮助。">
+  <title>善意同行 · 校园里的一点温暖</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <aside class="sidebar">
+    <a href="#plaza" class="brand"><img src="/favicon.svg" width="38" height="38" alt=""><span>善意同行<small>CAMPUS KINDNESS</small></span></a>
+    <div class="campus-label"><span class="green-dot"></span>校园互助 · 演示版</div>
+    <p class="nav-caption">一起让小事发生</p>
+    <nav aria-label="主导航" id="navigation"></nav>
+    <div class="sidebar-note"><span class="tiny-spark">✳</span><p>善意不必很大，<br>刚好帮到你就好。</p><span>从身边的一件小事开始</span></div>
+    <button class="profile-button" id="profile-button" type="button"></button>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumb">我们的校园 <span>/</span> <strong id="breadcrumb">互助广场</strong></div><div class="top-actions"><span class="demo-label">示例数据 · 可操作演示</span><button class="button primary small" id="publish-top" type="button">＋ 发布需求</button></div></header>
+    <main id="main" tabindex="-1"><div class="loading">正在打开校园里的小善意…</div></main>
+    <footer class="page-footer"><span>善意同行 · 从一件小事，认识身边的温暖</span><button class="text-button" id="about-footer" type="button">关于这个项目 ↗</button></footer>
+  </div>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="手机导航"></nav>
+  <dialog id="publish-dialog" class="dialog"><div class="dialog-head"><div><span class="eyebrow">A LITTLE HELP</span><h2>说说你需要的帮助</h2></div><button class="icon-button" data-close="publish-dialog" aria-label="关闭发布窗口">×</button></div>
+    <p class="dialog-intro">把事情说清楚，让合适的同学更容易找到你。</p>
+    <form id="publish-form">
+      <fieldset class="category-choice"><legend>需求分类</legend><label><input type="radio" name="category" value="study" checked> <span>学习互助<small>交流思路，分享经验</small></span></label><label><input type="radio" name="category" value="borrow"> <span>物品借用<small>借一点方便，记得归还</small></span></label></fieldset>
+      <label class="field">一句话说说需求<input name="title" required minlength="4" maxlength="40" placeholder="例如：想找同学交流一道高数题"></label>
+      <label class="field">详细说明<textarea name="description" required minlength="8" maxlength="1000" rows="4" placeholder="你遇到了什么问题？希望得到怎样的帮助？"></textarea></label>
+      <div class="form-grid"><label class="field">协作方式<select name="mode"><option value="offline">线下碰面</option><option value="online">线上交流</option></select></label><label class="field" id="location-field">公共交接区域<input name="location" maxlength="50" placeholder="例如：图书馆一楼大厅"></label></div>
+      <div class="form-grid"><label class="field">响应截止时间<input type="datetime-local" name="deadline" required></label><label class="field" id="return-field" hidden>预计归还时间<input type="datetime-local" name="returnAt"></label></div>
+      <p class="form-note">适合发布日常、无偿的小需求。请使用校园公共地点，不要填写私人住址或公开联系方式。</p>
+      <p class="form-error" id="publish-error" role="alert"></p>
+      <div class="dialog-footer"><button type="button" class="button quiet" data-close="publish-dialog">再想一下</button><button class="button primary" type="submit">发布这份小需求 ↗</button></div>
+    </form>
+  </dialog>
+  <dialog id="detail-dialog" class="dialog detail-dialog"><div id="detail-content"></div></dialog>
+  <dialog id="account-dialog" class="dialog account-dialog"><div class="dialog-head"><div><span class="eyebrow">MEET YOUR CAMPUS</span><h2>以谁的身份体验？</h2></div><button class="icon-button" data-close="account-dialog" aria-label="关闭身份窗口">×</button></div><p class="dialog-intro">这些是演示身份。你可以切换身份，体验同一次互助的两端。未接入学校身份认证。</p><div id="accounts"></div><button class="button quiet full" id="logout-button" type="button">退出，作为访客浏览</button></dialog>
+  <dialog id="about-dialog" class="dialog"><div class="dialog-head"><div><span class="eyebrow">SMALL ACTS, WARMER CAMPUS</span><h2>善意同行</h2></div><button class="icon-button" data-close="about-dialog" aria-label="关闭项目介绍">×</button></div><p class="about-lead">让校园里的小需求被看见，<br>让愿意帮忙的人找到彼此。</p><p>这是一个面向校园日常互助的比赛演示项目。我们从学习交流和物品借用开始，让每一次帮助有明确的进展和结果。</p><ol class="about-steps"><li><b>说出需求</b><span>写清楚事情、时间和公共区域。</span></li><li><b>找到彼此</b><span>同学响应，由发起人选定帮助者。</span></li><li><b>认真完成</b><span>双方协作，借来的物品确认归还。</span></li><li><b>留下一句感谢</b><span>感谢默认只对互助双方可见。</span></li></ol><p class="form-note">当前为本地演示版，全部初始需求为示例。没有支付、学校认证或紧急救援服务。后续规划与已实现功能在项目说明中分别列出。</p></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
