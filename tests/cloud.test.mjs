@@ -74,3 +74,18 @@ test('cloud: simultaneous writes retry without losing data or reseeding it', asy
     assert.equal((await withStore(db, store => store.tasks.length)), initialCount);
   } finally { db.close(); }
 });
+
+test('cloud: upgrading an existing database retains requests and inserts examples only once', async () => {
+  const db = database();
+  try {
+    const custom = {id:'existing-user-request',title:'现有用户的需求',status:'completed',responses:[],messages:[{text:'保留这条留言'}],events:[]};
+    const old = {version:1,tasks:[custom],notes:['保留其他字段']};
+    await db.prepare('INSERT INTO kindness_state (id, body, revision) VALUES (1, ?, 0)').bind(JSON.stringify(old)).run();
+    const first = await withStore(db, store => structuredClone(store));
+    assert.deepEqual(first.tasks.find(t=>t.id===custom.id),custom);
+    assert.deepEqual(first.notes,old.notes);
+    assert.equal(first.tasks.length,3);
+    const second = await withStore(db, store => structuredClone(store));
+    assert.deepEqual(second,first);
+  } finally { db.close(); }
+});

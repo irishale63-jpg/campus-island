@@ -12,10 +12,9 @@ const assets = {};
 for (const [route, file, type] of [['/','index.html','text/html'],['/styles.css','styles.css','text/css'],['/app.js','app.js','text/javascript'],['/favicon.svg','favicon.svg','image/svg+xml']]) {
   let body = readFileSync(resolve(root, 'public', file), 'utf8');
   if (file === 'index.html') {
-    body = body.replace('示例数据 · 可操作演示', '公开演示 · 请勿填写个人信息')
-      .replace('这些是演示身份。你可以切换身份，体验同一次互助的两端。未接入学校身份认证。', '演示身份由所有访客共用，协作内容也可能被其他体验者看到。请勿填写真实个人信息。')
-      .replace('适合发布日常、无偿的小需求。请使用校园公共地点，不要填写私人住址或公开联系方式。', '这是公开演示，身份由所有访客共用。请只填写模拟内容，不要填写姓名、电话或私人地址。')
-      .replace('当前为本地演示版，全部初始需求为示例。', '当前为公开演示版，全部初始需求为示例；访客共用演示身份。');
+    body = body.replace('演示体验 · 来试一试', '演示体验 · 用小事试一试')
+      .replace('挑一个身份，体验同一次互助的两端。这里是模拟校园，暂未接入学校认证。', '欢迎来试一试。三个演示身份由访客共用，建议用模拟内容体验，把真实个人信息留在自己手里。')
+      .replace('当前为本地演示版，全部初始需求为示例。', '当前为公开演示版，全部初始需求为示例。');
   }
   assets[route] = { body, type: type + '; charset=utf-8' };
 }

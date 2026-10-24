@@ -38,8 +38,9 @@ function requireUser() { if (state.user) return true; openAccounts(); return fal
 function drawNavigation() {
   const items = [['plaza','grid','互助广场'],['my','heart','我的互助'],['thanks','mail','我的感谢卡']];
   $('#navigation').innerHTML = items.map(([key, glyph, label]) => `<a href="#${key}" class="nav-item ${state.view === key ? 'active' : ''}" ${state.view === key ? 'aria-current="page"' : ''}>${icon(glyph)}${label}${key === 'plaza' ? `<span class="nav-count">${state.tasks.filter(isOpen).length}</span>` : ''}</a>`).join('') + `<button type="button" class="nav-item full" data-about>${icon('info')}关于善意同行</button>`;
-  $('#mobile-nav').innerHTML = `<a href="#plaza" class="${state.view === 'plaza' ? 'active' : ''}">${icon('grid')}广场</a><button type="button" data-publish>${icon('plus')}发布</button><a href="#my" class="${state.view === 'my' ? 'active' : ''}">${icon('heart')}互助</a><a href="#thanks" class="${state.view === 'thanks' ? 'active' : ''}">${icon('mail')}感谢</a><button type="button" data-account>${icon('user')}${state.user ? e(state.user.name) : '身份'}</button>`;
-  $('#profile-button').innerHTML = `${avatar(state.user)}<span>${state.user ? e(state.user.name) : '选择演示身份'}<small>${state.user ? '演示中 · 点击切换身份' : '开始你的一次校园互助'}</small></span><span class="profile-arrow">⇄</span>`;
+  $('#mobile-nav').innerHTML = `<a href="#plaza" ${state.view==='plaza'?'aria-current="page"':''} class="${state.view === 'plaza' ? 'active' : ''}">${icon('grid')}广场</a><button type="button" data-publish>${icon('plus')}发布</button><a href="#my" ${state.view==='my'?'aria-current="page"':''} class="${state.view === 'my' ? 'active' : ''}">${icon('heart')}互助</a><a href="#thanks" ${state.view==='thanks'?'aria-current="page"':''} class="${state.view === 'thanks' ? 'active' : ''}">${icon('mail')}感谢</a><button type="button" data-account>${icon('user')}${state.user ? e(state.user.name) : '身份'}</button>`;
+  $('#profile-button').setAttribute('aria-label', state.user ? '切换演示身份，当前为'+state.user.name : '选择演示身份');
+  $('#profile-button').innerHTML = `${avatar(state.user)}<span>${state.user ? e(state.user.name) : '体验身份'}<small>${state.user ? '演示中 · 点击切换身份' : '开始你的一次校园互助'}</small></span><span class="profile-arrow">⇄</span>`;
   $('#breadcrumb').textContent = { plaza:'互助广场', my:'我的互助', thanks:'我的感谢卡' }[state.view];
 }
 const entryArt = {
@@ -47,12 +48,12 @@ const entryArt = {
   request: `<svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="7" y="7" width="66" height="65" rx="17" fill="#f8e9f0"/><g stroke-linecap="round" stroke-linejoin="round"><path d="M27 21h29v31H27Z" fill="#fffafc" stroke="#ceb0cf" stroke-width="1.5"/><path d="M34 29h15m-15 6h12m-12 6h16" stroke="#ddc5e1" stroke-width="1.4"/><rect x="16" y="35" width="48" height="30" rx="4" fill="#f5deea" stroke="#bd8eac" stroke-width="1.6"/><path d="m18 38 22 15 22-15m-44 25 17-13m27 13L45 50" stroke="#c79bb6" stroke-width="1.5"/><path d="M41 55s-9-5-8-10c1-4 6-4 8-1 2-3 7-3 8 1 1 5-8 10-8 10Z" fill="#e7bfd5" stroke="#bd8eac" stroke-width="1.3"/><path d="M15 18v8m-4-4h8M66 28v6m-3-3h6" stroke="#d0b3dc" stroke-width="1.4"/></g></svg>`,
 };
 function card(task) {
-  return `<article class="task-card"><button type="button" class="card-body" data-task="${e(task.id)}" aria-label="查看需求：${e(task.title)}"><div class="card-meta">${cat(task)}${status(task)}</div><h3>${e(task.title)}</h3><p class="description">${e(task.description)}</p><div class="tags">${task.tags.map(tag=>`<span>${e(tag)}</span>`).join('')}</div><div class="card-location">${icon('pin')}${e(task.location)}</div></button><div class="card-bottom">${avatar(task.owner)}<span>${e(task.owner.name)}</span><time datetime="${e(task.deadline)}">${isOpen(task) ? deadline(task.deadline) : names[task.status]}</time><span class="arrow" aria-hidden="true">↗</span></div></article>`;
+  return `<article class="task-card"><button type="button" class="card-hit" data-task="${e(task.id)}" aria-label="查看需求：${e(task.title)}"></button><div class="card-body"><div class="card-meta">${cat(task)}${status(task)}</div><h3>${e(task.title)}</h3><p class="description">${e(task.description)}</p><div class="tags">${task.tags.map(tag=>`<span>${e(tag)}</span>`).join('')}</div><div class="card-location">${icon('pin')}${e(task.location)}</div></div><div class="card-bottom">${avatar(task.owner)}<span>${e(task.owner.name)}</span><time datetime="${e(task.deadline)}">${isOpen(task) ? deadline(task.deadline) : names[task.status]}</time><span class="arrow" aria-hidden="true">↗</span></div></article>`;
 }
 const empty = (title, text, action = '') => `<div class="empty-state">${icon('leaf')}<h3>${e(title)}</h3><p>${e(text)}</p>${action}</div>`;
 function searchBar() { return `<label class="search">${icon('search')}<input id="search-input" type="search" aria-label="搜索互助需求" placeholder="搜索高数、雨伞或交接地点" value="${e(state.query)}" maxlength="100"></label>`; }
 function filters() {
-  return `<div class="filter-row">${[['all','全部需求'],['study','学习互助'],['borrow','物品借用']].map(([key,label])=>`<button type="button" class="filter-chip ${state.category===key?'active':''}" data-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}<span class="result-count" id="result-count"></span><select class="sort-select" aria-label="需求排序" id="sort-select"><option value="latest" ${state.sort==='latest'?'selected':''}>最新发布 ↓</option><option value="deadline" ${state.sort==='deadline'?'selected':''}>截止时间最近 ↓</option></select></div>`;
+  return `<div class="filter-row"><div class="category-segments" role="group" aria-label="需求分类筛选">${[['all','全部需求'],['study','学习互助'],['borrow','物品借用']].map(([key,label])=>`<button type="button" class="filter-chip ${state.category===key?'active':''}" data-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}</div><span class="result-count" id="result-count" role="status" aria-live="polite" aria-atomic="true"></span><select class="sort-select" aria-label="需求排序" id="sort-select"><option value="latest" ${state.sort==='latest'?'selected':''}>最新发布</option><option value="deadline" ${state.sort==='deadline'?'selected':''}>截止时间最近</option></select></div>`;
 }
 function drawResults() {
   let tasks = [...state.tasks];
@@ -65,20 +66,25 @@ function drawResults() {
   tasks = tasks.filter(t => (state.category === 'all' || t.category === state.category) && `${t.title} ${t.description} ${t.location} ${t.tags.join(' ')}`.toLowerCase().includes(state.query.trim().toLowerCase()));
   tasks.sort((a,b)=>state.sort === 'deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline) : Date.parse(b.createdAt)-Date.parse(a.createdAt));
   $('#result-count').textContent = `${tasks.length} 条`;
-  $('#task-results').innerHTML = tasks.length ? tasks.map(card).join('') : empty('还没有找到合适的小需求', '试试其他分类或关键词，也可以发布你自己的需求。', '<button class="button outline" type="button" data-publish>发布一个需求 ↗</button>');
+  $('#task-results').innerHTML = tasks.length ? tasks.map(card).join('') : (state.view==='my' && !state.query && state.category==='all' ? empty('下一件小事，从这里开始', '你参与的互助会保存在这里。可以去帮一位同学，也可以说出自己的需要。', '<a class="button primary" href="#plaza">去看看谁需要帮助</a><button class="button outline" type="button" data-publish>发布需求</button>') : empty('换个词，也许就遇见了', '试试“高数”“雨伞”，或清除筛选看看其他需求。', '<button class="button primary" type="button" data-reset-search>清除搜索与筛选</button><button class="button outline" type="button" data-publish>发布我的需求</button>'));
 }
 function drawMain() {
   drawNavigation();
   const main = $('#main');
   if (state.view === 'thanks') { drawThanks(); return; }
   if (state.view === 'my' && !state.user) {
-    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>查看自己发布和参与的每一件小事。</p></div>${empty('先认识一下你吧', '选择一个演示身份，查看自己发布和参与的互助。', '<button class="button primary" type="button" data-account>选择演示身份</button>')}`;
+    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>查看自己发布和参与的每一件小事。</p></div>${empty('先认识一下你吧', '选择一个身份，体验发布、响应和协作。也可以先看看进行中的示例。', '<button class="button primary" type="button" data-account>选择演示身份</button><button class="button outline" type="button" data-task="demo-active">看看协作示例</button>')}`;
     return;
   }
   const available = state.tasks.filter(isOpen);
   const feed = `<section id="plaza-section" class="feed-panel" aria-label="互助需求"><div class="section-top"><div class="section-title"><h2>${state.view==='my'?'互助记录':'发现互助需求'}</h2><span>${state.view==='my'?'查看进展，继续协作':'从你能做到的一件小事开始'}</span></div>${searchBar()}</div>${filters()}${state.view==='plaza'?`<div class="filter-row archive-filter"><button class="text-button" id="toggle-closed" type="button">${state.allStates?'☑ 正在显示全部状态':'□ 同时查看已结束的需求'}</button></div>`:''}<div class="task-grid" id="task-results"></div></section>`;
   if (state.view === 'plaza') {
-    main.innerHTML = `<section class="plaza-intro"><span class="eyebrow">CAMPUS KINDNESS</span><h1>校园里的小需求，<span>在这里遇见回应。</span></h1><p>学习互助，物品借用。让一次帮助有始有终。</p></section><div class="plaza-layout">${feed}<aside class="plaza-aside" aria-label="发布与互助指南"><section class="publish-panel"><div class="publish-panel-head"><span class="publish-art" aria-hidden="true">${entryArt.request}</span><div><span class="eyebrow">NEED A LITTLE HELP?</span><h2>把需要说出来。</h2></div></div><p>写清楚事情、时间和交接区域，让愿意帮忙的同学找到你。</p><button type="button" class="button primary full" data-publish>发布一份需求 <span aria-hidden="true">↗</span></button><span class="panel-note">日常小事 · 无偿互助</span></section><section class="help-panel"><span class="help-art" aria-hidden="true">${entryArt.help}</span><div><h2>刚好你能帮上忙？</h2><p>按类型或关键词，找到适合自己的需求。</p><button type="button" class="text-button" data-explore>浏览互助需求 <span aria-hidden="true">↗</span></button></div></section><section class="aside-overview" aria-label="可响应的示例需求"><h2>广场概览 <span>演示数据</span></h2><dl><div><dt>等待回应</dt><dd>${available.length}</dd></div><div><dt>学习互助</dt><dd>${available.filter(t=>t.category==='study').length}</dd></div><div><dt>物品借用</dt><dd>${available.filter(t=>t.category==='borrow').length}</dd></div></dl></section><p class="aside-footnote">发布 → 响应 → 协作 → 完成<br>最后，留下一句感谢。</p></aside></div>`;
+    const chinaDay = new Date(Date.now()+8*3600000);
+    const daysSinceMonday = (chinaDay.getUTCDay()+6)%7;
+    const weekMs = Date.UTC(chinaDay.getUTCFullYear(),chinaDay.getUTCMonth(),chinaDay.getUTCDate()-daysSinceMonday)-8*3600000;
+    const finished = state.tasks.filter(t=>t.status==='completed' && Date.parse(t.completedAt)>=weekMs).length;
+    const examples = state.tasks.filter(t=>['demo-active','demo-completed'].includes(t.id));
+    main.innerHTML = `<section class="plaza-intro"><div class="intro-copy"><span class="eyebrow">一点善意，让校园更近一点</span><h1>需要帮忙？<span>刚好有我。</span></h1><p>找到一份你能帮上的小事，也让自己的需要被看见。</p><div class="intro-stats"><span><b>${available.length}</b> 个需求可响应</span><span>本周完成 <b>${finished}</b> 次</span><small>本站演示数据</small></div></div><section class="intro-action" aria-label="发布需求"><span class="publish-art" aria-hidden="true">${entryArt.request}</span><div><h2>把需要说出来。</h2><p>从身边的一件小事开始。</p><button type="button" class="button primary" data-publish>发布一份需求 ${icon('plus')}</button></div></section></section>${feed}<section class="showcase" aria-label="互助流程演示案例"><div class="section-title"><h2>小事有回应，善意有回响。</h2><span>以下为流程演示案例</span></div><div class="showcase-grid">${examples.map(t=>`<button type="button" class="showcase-card" data-task="${e(t.id)}" aria-label="查看演示案例：${e(t.title)}"><span class="showcase-icon">${icon(t.status==='completed'?'heart':'book')}</span><span class="showcase-copy">${status(t)}<strong>${e(t.title)}</strong><small>${t.status==='completed'?'一次互助完成，一句谢谢被认真留下。':'已经找到彼此，正在一起解决小问题。'}</small></span><span class="showcase-arrow" aria-hidden="true">↗</span></button>`).join('')}</div></section>`;
   } else {
     main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>${e(state.user.name)}，查看你发布和参与的需求，继续未完成的协作。</p></div><div class="filter-row">${[['all','全部参与'],['published','我发布的'],['responded','我响应的']].map(([k,l])=>`<button class="filter-chip ${state.mine===k?'active':''}" data-mine="${k}" type="button">${l}</button>`).join('')}</div>${feed}`;
   }
@@ -88,14 +94,14 @@ let thanksDraw = 0;
 async function drawThanks() {
   const version = ++thanksDraw;
   $('#main').innerHTML = `<div class="page-heading"><span class="eyebrow">A NOTE TO REMEMBER</span><h1>把谢谢，认真留下来。</h1><p>互助完成后的一句感谢，只在你们之间传递。</p></div><div class="thanks-grid" id="thanks-results"></div>`;
-  if (!state.user) { $('#thanks-results').innerHTML = empty('你的感谢卡，等你来打开', '先选择演示身份，查看你送出或收到的感谢。', '<button class="button primary" data-account type="button">选择演示身份</button>'); return; }
+  if (!state.user) { $('#thanks-results').innerHTML = empty('你的感谢卡，等你来打开', '选周同学或许同学，就能打开一张示例感谢卡，体验帮助完成后的温暖。', '<button class="button primary" data-account type="button">选择身份，打开感谢</button><a class="button outline" href="#plaza">先去看看互助</a>'); return; }
   try {
     const { tasks } = await api('/thanks');
     if (state.view !== 'thanks' || version !== thanksDraw) return;
-    $('#thanks-results').innerHTML = tasks.length ? tasks.map(task=>`<div class="thank-entry">${thankCard(task)}<button class="text-button" data-task="${e(task.id)}" type="button">查看这次互助 ↗</button></div>`).join('') : empty('第一张感谢卡，从一次帮助开始', '完成互助后，发起人可以在需求详情里送出一张感谢卡。', '<a class="button outline" href="#plaza">去看看谁需要帮助 ↗</a>');
+    $('#thanks-results').innerHTML = tasks.length ? tasks.map(task=>`<div class="thank-entry">${thankCard(task)}<button class="text-button" data-task="${e(task.id)}" type="button">查看这次互助 ↗</button></div>`).join('') : empty('第一张感谢卡，从一次帮助开始', '完成一次帮助，就能认真留下一句谢谢。切换到周同学或许同学，还能先看看示例卡片。', '<a class="button primary" href="#plaza">去看看谁需要帮助</a><button class="button outline" type="button" data-account>切换身份看示例</button>');
   } catch (err) { if ($('#thanks-results')) $('#thanks-results').innerHTML = empty('暂时没有打开感谢卡',err.message); }
 }
-function thankCard(task) { return `<article class="thank-card"><span class="eyebrow">A LITTLE THANK YOU</span><span>${icon('heart')}</span><blockquote>${e(task.thanks.text)}</blockquote><p>${e(task.owner.name)} → ${e(task.helper.name)} · ${date(task.thanks.at)}</p><p>关于「${e(task.title)}」</p></article>`; }
+function thankCard(task) { return `<article class="thank-card"><span class="eyebrow">${task.isDemo?'一张示例感谢卡':'一次帮助，一份被记住的温暖'}</span><span>${icon('heart')}</span><blockquote>${e(task.thanks.text)}</blockquote><p>${e(task.owner.name)} → ${e(task.helper.name)} · ${date(task.thanks.at)}</p><p>关于「${e(task.title)}」</p></article>`; }
 async function reload() { const [me, list] = await Promise.all([api('/me'),api('/tasks')]); state.user=me.user; state.tasks=list.tasks; drawMain(); }
 async function openAccounts() {
   try {
@@ -121,7 +127,7 @@ function updateFields() {
 const actionButton = (task, action, text, style='primary', extra='') => `<button type="button" class="button ${style}" data-action="${action}" data-id="${e(task.id)}" ${extra}>${text}</button>`;
 function detailHTML(task) {
   const owner=state.user?.id===task.ownerId, helper=state.user?.id===task.helperId, participant=owner||helper;
-  let html=`<div class="detail-top">${cat(task)}${status(task)}<button class="icon-button" data-close="detail-dialog" aria-label="关闭需求详情">×</button></div><h2 class="detail-title">${e(task.title)}</h2><div class="detail-author">${avatar(task.owner)}<span>${e(task.owner.name)} 发布</span><small>${date(task.createdAt)}</small></div><p class="detail-description">${e(task.description)}</p><div class="detail-facts"><div><small>协作区域</small>${e(task.location)}</div><div><small>响应截止</small>${date(task.deadline)}</div>${task.returnAt?`<div><small>预计归还</small>${date(task.returnAt)}</div>`:''}${task.helper?`<div><small>这次的帮助者</small>${e(task.helper.name)}</div>`:''}</div>`;
+  let html=`<div class="detail-top">${cat(task)}${status(task)}<button class="icon-button" data-close="detail-dialog" aria-label="关闭需求详情">×</button></div><h2 id="detail-title" class="detail-title">${e(task.title)}</h2><div class="detail-author">${avatar(task.owner)}<span>${e(task.owner.name)} 发布</span><small>${date(task.createdAt)}</small></div>${task.isDemo?'<p class="demo-context">流程演示案例 · 可以切换身份体验每一步</p>':''}<p class="detail-description">${e(task.description)}</p><div class="detail-facts"><div><small>协作区域</small>${e(task.location)}${task.mode==='offline'?'<span class="location-guidance">建议在明亮、人多的校园公共区域交接。</span>':''}</div><div><small>响应截止</small>${date(task.deadline)}</div>${task.returnAt?`<div><small>预计归还</small>${date(task.returnAt)}</div>`:''}${task.helper?`<div><small>这次的帮助者</small>${e(task.helper.name)}</div>`:''}</div>`;
   if (isOpen(task)) {
     if (owner) {
       html+=`<section class="detail-section"><h3>愿意帮忙的同学 · ${task.responseCount}</h3>`;
@@ -193,9 +199,10 @@ document.addEventListener('click', async event=>{
     button.disabled=true;
     try{const {user}=await api('/login',{userId:button.dataset.login});state.user=user;drawNavigation();$('#account-dialog').close();$('#detail-dialog').close();$('#publish-dialog').close();await reload();toast('现在以'+state.user.name+'的身份体验');}catch(err){toast(err.message);}finally{button.disabled=false;}return;
   }
-  if(button.dataset.category){state.category=button.dataset.category;drawMain();return;}
-  if(button.dataset.mine){state.mine=button.dataset.mine;drawMain();return;}
-  if(button.id==='toggle-closed'){state.allStates=!state.allStates;drawMain();return;}
+  if(button.dataset.category){state.category=button.dataset.category;drawMain();document.querySelector('[data-category="'+state.category+'"]')?.focus({preventScroll:true});return;}
+  if(button.dataset.mine){state.mine=button.dataset.mine;drawMain();document.querySelector('[data-mine="'+state.mine+'"]')?.focus({preventScroll:true});return;}
+  if(button.id==='toggle-closed'){state.allStates=!state.allStates;drawMain();$('#toggle-closed')?.focus({preventScroll:true});return;}
+  if(button.hasAttribute('data-reset-search')){state.query='';state.category='all';state.mine='all';drawMain();$('#search-input')?.focus();return;}
   if(button.dataset.action){
     const action=button.dataset.action;
     if(['select','cancel','accept-cancel','complete','deliver','return','confirm-return'].includes(action)&&!confirm({select:'确定选择这位同学？确认后将停止接收其他响应。',cancel:'确定取消或申请协商取消这次互助？', 'accept-cancel':'确定同意取消这次互助？',complete:'请确认这次需求已经解决。确认完成？',deliver:'请确认物品已经交给借用同学。',return:'请确认物品已经归还给出借同学。','confirm-return':'请确认已经收到归还的物品。'}[action]))return;
