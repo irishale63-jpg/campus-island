@@ -55,8 +55,8 @@ test('study: two accounts complete, private thanks and messages stay private, da
   await f.act(task.id,'submit','zhou');
   await f.act(task.id,'complete','lin');
   await f.act(task.id,'thank','lin',{text:'谢谢你耐心解释，现在真的明白了！'});
-  assert.equal((await f.request('/thanks',undefined,'zhou')).tasks.length,1);
-  assert.equal((await f.request('/thanks',undefined,'xu')).tasks.length,0);
+  assert.equal((await f.request('/thanks',undefined,'zhou')).tasks.some(t=>t.id===task.id),true);
+  assert.equal((await f.request('/thanks',undefined,'xu')).tasks.some(t=>t.id===task.id),false);
   assert.equal((await f.request('/tasks/'+task.id,undefined,'guest')).task.thanks,null);
   await f.restart(); await f.login('lin');
   r=await f.request('/tasks/'+task.id,undefined,'lin');

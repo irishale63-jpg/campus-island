@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from '
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { accounts, seedData } from './lib/seed.mjs';
+import { accounts, seedData, ensureDemoExamples } from './lib/seed.mjs';
 import { createDomain, knownAccounts, fail, must, clean } from './lib/domain.mjs';
 import { launchAddress } from './lib/local-address.mjs';
 
@@ -19,7 +19,8 @@ export function createApp({ dataFile = resolve(ROOT, 'data/store.json'), demo = 
     writeFileSync(temp, JSON.stringify(store, null, 2), 'utf8');
     renameSync(temp, dataFile);
   };
-  if (!existsSync(dataFile)) save();
+  const demoUpdated = demo && ensureDemoExamples(store);
+  if (!existsSync(dataFile) || demoUpdated) save();
   const { expire, view, act } = createDomain(() => store, save);
   const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

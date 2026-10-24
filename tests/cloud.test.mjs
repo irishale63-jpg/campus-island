@@ -44,6 +44,7 @@ test('cloud: shared durable data, private participant views, secure sessions and
   const db = database();
   try {
     const owner = client(db), helper = client(db), guest = client(db);
+    const initialCount = (await guest('/tasks')).tasks.length;
     await owner('/login', {userId:'lin'}); await helper('/login', {userId:'zhou'});
     const {task} = await owner('/tasks', taskBody(), 201);
     const {task:responded} = await helper('/tasks/'+task.id+'/action', {action:'respond',message:'我可以一起讨论这道题'});
@@ -56,7 +57,7 @@ test('cloud: shared durable data, private participant views, secure sessions and
     const freshClient = client(db);
     await freshClient('/login', {userId:'lin'});
     assert.equal((await freshClient('/thanks')).tasks.length, 1);
-    assert.equal((await guest('/tasks')).tasks.length, 7);
+    assert.equal((await guest('/tasks')).tasks.length, initialCount + 1);
     assert.equal((await guest('/tasks/'+task.id)).task.thanks, null);
     await guest('/tasks', taskBody(), 401);
     await owner('/logout', {});
@@ -67,9 +68,9 @@ test('cloud: shared durable data, private participant views, secure sessions and
 test('cloud: simultaneous writes retry without losing data or reseeding it', async () => {
   const db = database();
   try {
-    await withStore(db, () => null);
+    const initialCount = await withStore(db, store => store.tasks.length);
     await Promise.all(['one','two'].map(id => withStore(db, store => { store.notes = [...(store.notes || []), id]; })));
     assert.deepEqual((await withStore(db, store => store.notes)).sort(), ['one','two']);
-    assert.equal((await withStore(db, store => store.tasks.length)), 6);
+    assert.equal((await withStore(db, store => store.tasks.length)), initialCount);
   } finally { db.close(); }
 });
