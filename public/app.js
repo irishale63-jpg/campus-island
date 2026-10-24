@@ -46,45 +46,11 @@ const entryArt = {
   help: `<svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="6" y="7" width="66" height="65" rx="17" fill="#eee4f6"/><g stroke="#a685bc" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 36q24-38 48 0" fill="#fff9fd"/><path d="M16 36q6-7 12 0 6-7 12 0 6-7 12 0 6-7 12 0M40 18v36q0 9-8 5M40 19q-7 6-9 14m9-14q7 6 9 14"/><path d="M19 59q6-9 12-2m30 2q-6-9-12-2" stroke="#c196b2"/></g><path d="M62 17c-2-5-9-2-6 2l6 5 5-5c3-4-3-7-5-2Z" fill="#e4bbd2" stroke="#bd8eac" stroke-width="1.2"/><path d="M13 14v7m-3-3h6M64 62v7m-3-3h6" stroke="#c5abd6" stroke-width="1.4" stroke-linecap="round"/></svg>`,
   request: `<svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="7" y="7" width="66" height="65" rx="17" fill="#f8e9f0"/><g stroke-linecap="round" stroke-linejoin="round"><path d="M27 21h29v31H27Z" fill="#fffafc" stroke="#ceb0cf" stroke-width="1.5"/><path d="M34 29h15m-15 6h12m-12 6h16" stroke="#ddc5e1" stroke-width="1.4"/><rect x="16" y="35" width="48" height="30" rx="4" fill="#f5deea" stroke="#bd8eac" stroke-width="1.6"/><path d="m18 38 22 15 22-15m-44 25 17-13m27 13L45 50" stroke="#c79bb6" stroke-width="1.5"/><path d="M41 55s-9-5-8-10c1-4 6-4 8-1 2-3 7-3 8 1 1 5-8 10-8 10Z" fill="#e7bfd5" stroke="#bd8eac" stroke-width="1.3"/><path d="M15 18v8m-4-4h8M66 28v6m-3-3h6" stroke="#d0b3dc" stroke-width="1.4"/></g></svg>`,
 };
-const heroArt = `<div class="hero-art" aria-hidden="true"><svg viewBox="0 0 420 330" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g stroke-linecap="round" stroke-linejoin="round">
-<path d="M36 64v12m-6-6h12M365 53v16m-8-8h16M321 286v12m-6-6h12" stroke="#cfb9dd" stroke-width="1.4"/>
-<circle cx="372" cy="94" r="2" fill="#d7c3e2"/><circle cx="57" cy="284" r="2" fill="#e2c5d7"/>
-<path d="M311 30c-4-10-17-4-12 4l12 10 11-10c5-8-8-14-11-4Z" fill="#f3e5f0" stroke="#d3b6cd" stroke-width="1.2"/>
-<rect x="222" y="118" width="154" height="139" rx="7" fill="#f5effa" stroke="#c6b3d9" stroke-width="1.4"/>
-<path d="M229 118h140a7 7 0 0 1 7 7v15H222v-15a7 7 0 0 1 7-7Z" fill="#e6dcf1"/>
-<path d="M222 140h154" stroke="#c6b3d9"/>
-<text x="235" y="132" font-family="Georgia,serif" font-size="9" letter-spacing="1" fill="#a28bb5">a note for you</text>
-<rect x="358" y="125" width="9" height="8" rx="1" stroke="#b8a1cc"/>
-<path d="M309 168c-13-16-33 1-17 15l17 14 17-14c16-14-4-31-17-15Z" fill="#efdce9" stroke="#c598b5" stroke-width="1.4"/>
-<path d="M277 222c12-12 18 13 29 0s17 10 30-1M280 235h52" stroke="#d6c3e2" stroke-width="1.3"/>
-<rect x="52" y="41" width="257" height="210" rx="9" fill="#fffaf8" stroke="#c7afd5" stroke-width="1.5"/>
-<path d="M61 41h239a9 9 0 0 1 9 9v18H52V50a9 9 0 0 1 9-9Z" fill="#eae0f4"/>
-<path d="M52 68h257" stroke="#c7afd5"/>
-<rect x="65" y="50" width="8" height="10" rx="1" stroke="#b398c8"/>
-<path d="M67 53h4m-4 3h4" stroke="#b398c8"/>
-<text x="82" y="59" font-family="Georgia,serif" font-size="10" letter-spacing="1.4" fill="#9277a4">little kind things</text>
-<path d="M277 58h7m12-6v7h-7v-7h7Z" stroke="#b398c8" stroke-width="1.1"/>
-<g stroke="#bc8ca8" stroke-width="1.6">
-<path d="M122 144q54-78 108 0" fill="#fbf0f4"/>
-<path d="M122 144q13-13 27 0 13-13 27 0 13-13 27 0 13-13 27 0M176 105q-9 15-10 29m10-29q12 15 13 29M176 144v61q0 15-12 8"/>
-<circle cx="140" cy="174" r="12" fill="#fff8f5"/>
-<circle cx="210" cy="174" r="12" fill="#fff8f5"/>
-<path d="M129 171q1-14 13-11m-7 7 5-5 6 6M199 169q4-10 15-8m-13 7 7-5 7 6M136 175v1m8-1v1m-7 6q3 3 6 0m63-7v1m8-1v1m-7 6q3 3 6 0"/>
-<path d="M122 213v-7q0-14 18-14 14 0 19 13l10-4M228 213v-7q0-14-18-14-14 0-19 13l-10-4"/>
-<path d="M128 213h25m44 0h25" stroke="#d8bddc"/>
-<path d="M114 99v7m-3-3h6M239 180v7m-3-3h6M221 92v7m-3-3h6" stroke="#d6b1c9" stroke-width="1.1"/>
-</g>
-<text x="105" y="236" font-family="Georgia,serif" font-style="italic" font-size="10" letter-spacing=".8" fill="#b18ba4">a little help, a little closer.</text>
-<g transform="rotate(-9 66 209)"><rect x="22" y="180" width="84" height="59" rx="5" fill="#f8e6ee" stroke="#cc9eb8" stroke-width="1.3"/><path d="m24 183 40 29 40-29m-80 54 28-23m52 23-28-23" stroke="#d9b2c8" stroke-width="1.3"/><path d="M65 218s-11-6-10-12c1-5 8-5 10-1 2-4 9-4 10 1 1 6-10 12-10 12Z" fill="#e8bed3" stroke="#c99bb6"/></g>
-<path d="M107 273c10-5 9 10 18 3s10 4 16 0" stroke="#d8bad2" stroke-width="1.3"/>
-<path d="M346 279c-3-7-12-3-8 3l8 7 8-7c4-6-5-10-8-3Z" stroke="#d7bfdc" stroke-width="1.3"/>
-</g></svg></div>`;
 function card(task) {
   return `<article class="task-card"><button type="button" class="card-body" data-task="${e(task.id)}" aria-label="查看需求：${e(task.title)}"><div class="card-meta">${cat(task)}${status(task)}</div><h3>${e(task.title)}</h3><p class="description">${e(task.description)}</p><div class="tags">${task.tags.map(tag=>`<span>${e(tag)}</span>`).join('')}</div><div class="card-location">${icon('pin')}${e(task.location)}</div></button><div class="card-bottom">${avatar(task.owner)}<span>${e(task.owner.name)}</span><time datetime="${e(task.deadline)}">${isOpen(task) ? deadline(task.deadline) : names[task.status]}</time><span class="arrow" aria-hidden="true">↗</span></div></article>`;
 }
 const empty = (title, text, action = '') => `<div class="empty-state">${icon('leaf')}<h3>${e(title)}</h3><p>${e(text)}</p>${action}</div>`;
-function searchBar() { return `<label class="search">${icon('search')}<input id="search-input" type="search" aria-label="搜索互助需求" placeholder="找找有没有你能帮忙的小事" value="${e(state.query)}" maxlength="100"></label>`; }
+function searchBar() { return `<label class="search">${icon('search')}<input id="search-input" type="search" aria-label="搜索互助需求" placeholder="搜索高数、雨伞或交接地点" value="${e(state.query)}" maxlength="100"></label>`; }
 function filters() {
   return `<div class="filter-row">${[['all','全部需求'],['study','学习互助'],['borrow','物品借用']].map(([key,label])=>`<button type="button" class="filter-chip ${state.category===key?'active':''}" data-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}<span class="result-count" id="result-count"></span><select class="sort-select" aria-label="需求排序" id="sort-select"><option value="latest" ${state.sort==='latest'?'selected':''}>最新发布 ↓</option><option value="deadline" ${state.sort==='deadline'?'selected':''}>截止时间最近 ↓</option></select></div>`;
 }
@@ -106,11 +72,16 @@ function drawMain() {
   const main = $('#main');
   if (state.view === 'thanks') { drawThanks(); return; }
   if (state.view === 'my' && !state.user) {
-    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR LITTLE CONTRIBUTIONS</span><h1>我的互助</h1><p>每一次参与，都有迹可循。</p></div>${empty('先认识一下你吧', '选择一个演示身份，查看自己发布和参与的互助。', '<button class="button primary" type="button" data-account>选择演示身份</button>')}`; return;
+    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>查看自己发布和参与的每一件小事。</p></div>${empty('先认识一下你吧', '选择一个演示身份，查看自己发布和参与的互助。', '<button class="button primary" type="button" data-account>选择演示身份</button>')}`;
+    return;
   }
   const available = state.tasks.filter(isOpen);
-  main.innerHTML = state.view === 'plaza' ? `<section class="hero"><div class="hero-copy"><span class="eyebrow">a little help, a warmer campus.</span><h1>一点善意，<br>让校园<span>更近一点。</span></h1><p>一道难题，一把雨伞。你的小小帮助，刚好是别人需要的温暖。</p><div class="hero-actions" aria-label="开始一次互助"><button class="hero-entry hero-entry-help" type="button" data-explore><span class="entry-art">${entryArt.help}</span><span class="entry-text"><strong>我可以帮忙</strong><small>回应一份小需求</small></span><span class="entry-arrow" aria-hidden="true">↗</span></button><button class="hero-entry hero-entry-request" type="button" data-publish><span class="entry-art">${entryArt.request}</span><span class="entry-text"><strong>我需要帮助</strong><small>写下你的小心愿</small></span><span class="entry-arrow" aria-hidden="true">↗</span></button></div></div>${heroArt}<span class="hero-mark">small things, warm hearts ♡</span></section><section class="summary" aria-label="演示需求概览"><div class="summary-item"><span class="summary-icon">${icon('heart')}</span><div><b>${available.length.toString().padStart(2,'0')}</b><p>等待回应的小需求</p></div><small>从这里开始 ↗</small></div><div class="summary-item"><span class="summary-icon">${icon('book')}</span><div><b>${available.filter(t=>t.category==='study').length.toString().padStart(2,'0')}</b><p>学习交流的机会</p></div><small>一起想一想</small></div><div class="summary-item"><span class="summary-icon">${icon('box')}</span><div><b>${available.filter(t=>t.category==='borrow').length.toString().padStart(2,'0')}</b><p>物品借用的小事</p></div><small>借一点方便</small></div></section>` : `<div class="page-heading"><span class="eyebrow">YOUR LITTLE CONTRIBUTIONS</span><h1>每一次互助，都算数。</h1><p>${e(state.user.name)}，这里记着你发出和回应的每一份小需求。</p></div><div class="filter-row">${[['all','全部参与'],['published','我发布的'],['responded','我响应的']].map(([k,l])=>`<button class="filter-chip ${state.mine===k?'active':''}" data-mine="${k}" type="button">${l}</button>`).join('')}</div>`;
-  main.innerHTML += `<section id="plaza-section"><div class="section-top"><div class="section-title"><h2>${state.view==='my'?'我的互助记录':'校园里的小需求'}</h2><span>${state.view==='my'?'每一点付出都被记得':'刚好你需要，刚好我可以'}</span></div>${searchBar()}</div>${filters()}${state.view==='plaza'?`<div class="filter-row archive-filter"><button class="text-button" id="toggle-closed" type="button">${state.allStates?'☑ 正在显示全部状态':'□ 同时查看已结束的需求'}</button></div>`:''}<div class="task-grid" id="task-results"></div></section><div class="how-it-works"><p><b>01 说出需求</b>　→　找到彼此　→　认真完成　→　留下一句感谢</p><span>这里展示的是可操作的示例需求</span></div>`;
+  const feed = `<section id="plaza-section" class="feed-panel" aria-label="互助需求"><div class="section-top"><div class="section-title"><h2>${state.view==='my'?'互助记录':'发现互助需求'}</h2><span>${state.view==='my'?'查看进展，继续协作':'从你能做到的一件小事开始'}</span></div>${searchBar()}</div>${filters()}${state.view==='plaza'?`<div class="filter-row archive-filter"><button class="text-button" id="toggle-closed" type="button">${state.allStates?'☑ 正在显示全部状态':'□ 同时查看已结束的需求'}</button></div>`:''}<div class="task-grid" id="task-results"></div></section>`;
+  if (state.view === 'plaza') {
+    main.innerHTML = `<section class="plaza-intro"><span class="eyebrow">CAMPUS KINDNESS</span><h1>校园里的小需求，<span>在这里遇见回应。</span></h1><p>学习互助，物品借用。让一次帮助有始有终。</p></section><div class="plaza-layout">${feed}<aside class="plaza-aside" aria-label="发布与互助指南"><section class="publish-panel"><div class="publish-panel-head"><span class="publish-art" aria-hidden="true">${entryArt.request}</span><div><span class="eyebrow">NEED A LITTLE HELP?</span><h2>把需要说出来。</h2></div></div><p>写清楚事情、时间和交接区域，让愿意帮忙的同学找到你。</p><button type="button" class="button primary full" data-publish>发布一份需求 <span aria-hidden="true">↗</span></button><span class="panel-note">日常小事 · 无偿互助</span></section><section class="help-panel"><span class="help-art" aria-hidden="true">${entryArt.help}</span><div><h2>刚好你能帮上忙？</h2><p>按类型或关键词，找到适合自己的需求。</p><button type="button" class="text-button" data-explore>浏览互助需求 <span aria-hidden="true">↗</span></button></div></section><section class="aside-overview" aria-label="可响应的示例需求"><h2>广场概览 <span>演示数据</span></h2><dl><div><dt>等待回应</dt><dd>${available.length}</dd></div><div><dt>学习互助</dt><dd>${available.filter(t=>t.category==='study').length}</dd></div><div><dt>物品借用</dt><dd>${available.filter(t=>t.category==='borrow').length}</dd></div></dl></section><p class="aside-footnote">发布 → 响应 → 协作 → 完成<br>最后，留下一句感谢。</p></aside></div>`;
+  } else {
+    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>${e(state.user.name)}，查看你发布和参与的需求，继续未完成的协作。</p></div><div class="filter-row">${[['all','全部参与'],['published','我发布的'],['responded','我响应的']].map(([k,l])=>`<button class="filter-chip ${state.mine===k?'active':''}" data-mine="${k}" type="button">${l}</button>`).join('')}</div>${feed}`;
+  }
   drawResults();
 }
 let thanksDraw = 0;
