@@ -191,7 +191,7 @@ document.addEventListener('click', async event=>{
   if(button.dataset.task){openDetail(button.dataset.task);return;}
   if(button.dataset.login){
     button.disabled=true;
-    try{await api('/login',{userId:button.dataset.login});$('#account-dialog').close();$('#detail-dialog').close();$('#publish-dialog').close();await reload();toast('现在以'+state.user.name+'的身份体验');}catch(err){toast(err.message);}finally{button.disabled=false;}return;
+    try{const {user}=await api('/login',{userId:button.dataset.login});state.user=user;drawNavigation();$('#account-dialog').close();$('#detail-dialog').close();$('#publish-dialog').close();await reload();toast('现在以'+state.user.name+'的身份体验');}catch(err){toast(err.message);}finally{button.disabled=false;}return;
   }
   if(button.dataset.category){state.category=button.dataset.category;drawMain();return;}
   if(button.dataset.mine){state.mine=button.dataset.mine;drawMain();return;}

@@ -5,3 +5,4 @@ data/
 *.log
 test-results/
 .DS_Store
+/sites/
