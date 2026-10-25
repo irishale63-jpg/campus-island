@@ -6,3 +6,6 @@ data/
 test-results/
 .DS_Store
 /sites/
+
+# Local submission archives and Git history backup
+/提交材料/
