@@ -1,6 +1,6 @@
-const $ = (selector, root = document) => root.querySelector(selector);
-const state = { user: null, tasks: [], category: 'all', query: '', sort: 'latest', allStates: false, mine: 'all', view: 'plaza', detail: null };
-const names = { open: '等待帮助', selecting: '等待确认', active: '互助进行中', review: '待确认完成', completed: '已完成', cancelled: '已取消', expired: '已过期' };
+const $ = (selector, root=document) => root.querySelector(selector);
+const state = {user:null,identities:[],tasks:[],schools:[],view:'plaza',query:'',category:'all',onlyOpen:true,sort:'latest',mine:'published',thanks:'received',detail:null,epoch:0,loadVersion:0,inbox:null,recoveryKey:null,pendingFile:null,selectedSchool:null};
+const names = {open:'待回应',selecting:'待确认',active:'进行中',review:'待确认完成',completed:'已完成',cancelled:'已取消',expired:'已截止'};
 const paths = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
@@ -16,222 +16,112 @@ const paths = {
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.heart}</svg>`;
 const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-const avatar = user => `<span class="avatar ${e(user?.color || '')}" aria-hidden="true">${e(user?.initial || '你')}</span>`;
-const cat = task => `<span class="category-tag ${task.category === 'borrow' ? 'borrow' : ''}">${icon(task.category === 'borrow' ? 'box' : 'book')}${task.category === 'borrow' ? '物品借用' : '学习互助'}</span>`;
-const status = task => `<span class="status ${e(task.status)}">${names[task.status] || '状态更新中'}</span>`;
-const date = value => new Intl.DateTimeFormat('zh-CN', { timeZone:'Asia/Shanghai', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).format(new Date(value));
-function deadline(value) {
-  const hours = Math.ceil((Date.parse(value) - Date.now()) / 3600000);
-  return hours <= 0 ? '已到截止时间' : hours < 24 ? `${hours} 小时后截止` : `${Math.ceil(hours / 24)} 天内响应`;
-}
+paths.chat='<path d="M21 11a8 8 0 0 1-8 8H7l-5 3 1-6a8 8 0 0 1-1-5 9 9 0 0 1 19 0Z"/><path d="M7 10h10M7 14h6"/>';
+const avatarEmoji={island:'🏝️',leaf:'🍃',moon:'🌙',cat:'🐱',book:'📖',star:'⭐'};
+const avatar=user=>`<span class="avatar ${e(user?.color||'')}" aria-hidden="true">${avatarEmoji[user?.avatar]||e(user?.initial||'你')}</span>`;
+const isOpen=t=>['open','selecting'].includes(t.status);
+const isParticipant=t=>state.user&&[t.ownerId,t.helperId].includes(state.user.id);
+const category=t=>`<span class="category-tag ${t.category==='borrow'?'borrow':''}">${icon(t.category==='borrow'?'box':'book')}${t.category==='borrow'?'借点东西':'学习交流'}</span>`;
+const status=t=>`<span class="status ${e(t.status)}">${names[t.status]||'状态更新中'}</span>`;
+const date=value=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
+function deadline(value){const d=new Date(value),now=new Date();const parts=v=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'numeric',day:'numeric'}).format(v);const day=parts(d)===parts(now)?'今天 ':parts(d)===parts(new Date(Date.now()+86400000))?'明天 ':new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'numeric',day:'numeric'}).format(d)+' ';return day+new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' 前';}
 let toastTimer;
-function toast(message) { $('#toast').textContent = message; $('#toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3600); }
-async function api(path, body) {
-  const response = await fetch('/api' + path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type':'application/json', 'X-Requested-With':'CampusKindness' }, body:JSON.stringify(body) });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || '操作失败，请稍后重试');
-  return data;
+function toast(text){$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3200);}
+async function api(path,body){let options={cache:'no-store'};if(body!==undefined){options={method:'POST',headers:{'X-Requested-With':'CampusKindness'},body:body instanceof FormData?body:JSON.stringify(body)};if(!(body instanceof FormData))options.headers['Content-Type']='application/json';}let response;try{response=await fetch('/api'+path,options);}catch{throw new Error('没加载出来，请重试。');}const data=await response.json();if(!response.ok){const error=new Error(data.error||'操作未成功，请重试。');error.status=response.status;throw error;}return data;}
+function openDialog(id){const dialog=$('#'+id);if(!dialog.open)dialog.showModal();}
+const empty=(title,text='',actions='')=>`<div class="empty-state">${icon('leaf')}<h3>${e(title)}</h3>${text?`<p>${e(text)}</p>`:''}<div class="empty-actions">${actions}</div></div>`;
+function resetPrivateState(broadcast=true){state.user=null;state.identities=[];state.tasks=[];state.epoch++;state.loadVersion++;state.detail=null;state.inbox=null;state.recoveryKey=null;state.pendingFile=null;state.selectedSchool=null;for(const d of document.querySelectorAll('dialog[open]'))d.close();if($('#identity-content'))$('#identity-content').innerHTML='';if($('#detail-content'))$('#detail-content').innerHTML='';if($('#public-profile-content'))$('#public-profile-content').innerHTML='';$('#preview-image').removeAttribute('src');$('#main').innerHTML='<div class="loading">正在加载…</div>';drawNavigation();if(broadcast)try{localStorage.setItem('island-session-change',String(Date.now())+Math.random());}catch{}}
+function drawNavigation(){
+ const items=[['plaza','grid','互助广场'],['my','heart','我的互助'],['thanks','mail','感谢'],['messages','chat','消息'],['profile','user','个人主页']];
+ $('#navigation').innerHTML=items.map(([key,glyph,label])=>`<a href="#${key}" class="nav-item ${state.view===key?'active':''}" ${state.view===key?'aria-current="page"':''}>${icon(glyph)}${label}${key==='messages'?'<span class="message-count" hidden></span>':''}</a>`).join('');
+ $('#mobile-nav').innerHTML=items.filter(x=>x[0]!=='profile').map(([key,glyph,label])=>`<a href="#${key}" class="${state.view===key?'active':''}" ${state.view===key?'aria-current="page"':''}>${icon(glyph)}${{plaza:'广场',my:'互助',thanks:'感谢',messages:'消息'}[key]}${key==='messages'?'<span class="message-count" hidden></span>':''}</a>`).join('')+`<a href="#profile" class="${state.view==='profile'?'active':''}" ${state.view==='profile'?'aria-current="page"':''}>${icon('user')}我的</a>`;
+ $('#profile-button').innerHTML=`${avatar(state.user)}<span>${state.user?e(state.user.name):'切换身份'}</span><span class="profile-arrow" aria-hidden="true">⌄</span>`;
+ $('#profile-button').setAttribute('aria-label',state.user?'切换身份，当前为'+state.user.name:'切换身份');
+ const school=state.user?.schoolName||(!state.user?'华中师范大学':null);
+ $('#school-context').innerHTML=school?`<a href="#profile">${e(school)}<span class="circle-label">${state.user?.schoolStatus==='email_verified'?'邮箱已验证':'演示圈 · 未认证'}</span></a>`:'<a href="#profile">选择学校<span class="circle-label">未加入学校圈</span></a>';
+ updateMessageBadge();
 }
-function openDialog(id) { const d = $('#' + id); if (!d.open) d.showModal(); }
-const isOpen = task => ['open','selecting'].includes(task.status);
-function requireUser() { if (state.user) return true; openAccounts(); return false; }
-function drawNavigation() {
-  const items = [['plaza','grid','互助广场'],['my','heart','我的互助'],['thanks','mail','我的感谢卡']];
-  $('#navigation').innerHTML = items.map(([key, glyph, label]) => `<a href="#${key}" class="nav-item ${state.view === key ? 'active' : ''}" ${state.view === key ? 'aria-current="page"' : ''}>${icon(glyph)}${label}${key === 'plaza' ? `<span class="nav-count">${state.tasks.filter(isOpen).length}</span>` : ''}</a>`).join('') + `<button type="button" class="nav-item full" data-about>${icon('info')}关于善意同行</button>`;
-  $('#mobile-nav').innerHTML = `<a href="#plaza" ${state.view==='plaza'?'aria-current="page"':''} class="${state.view === 'plaza' ? 'active' : ''}">${icon('grid')}广场</a><button type="button" data-publish>${icon('plus')}发布</button><a href="#my" ${state.view==='my'?'aria-current="page"':''} class="${state.view === 'my' ? 'active' : ''}">${icon('heart')}互助</a><a href="#thanks" ${state.view==='thanks'?'aria-current="page"':''} class="${state.view === 'thanks' ? 'active' : ''}">${icon('mail')}感谢</a><button type="button" data-account>${icon('user')}${state.user ? e(state.user.name) : '身份'}</button>`;
-  $('#profile-button').setAttribute('aria-label', state.user ? '切换演示身份，当前为'+state.user.name : '选择演示身份');
-  $('#profile-button').innerHTML = `${avatar(state.user)}<span>${state.user ? e(state.user.name) : '体验身份'}<small>${state.user ? '演示中 · 点击切换身份' : '开始你的一次校园互助'}</small></span><span class="profile-arrow">⇄</span>`;
-  $('#breadcrumb').textContent = { plaza:'互助广场', my:'我的互助', thanks:'我的感谢卡' }[state.view];
+function updateMessageBadge(){const count=state.inbox?.unreadCount||0;for(const el of document.querySelectorAll('.message-count')){el.textContent=count>99?'99+':String(count);el.hidden=!count;}}
+async function reload(){const version=++state.loadVersion;const [me,list,schoolList]=await Promise.all([api('/me'),api('/tasks'),state.schools.length?Promise.resolve({schools:state.schools}):api('/schools')]);if(version!==state.loadVersion)return;Object.assign(state,{user:me.user,identities:me.identities,tasks:list.tasks,schools:schoolList.schools});drawNavigation();await drawMain();if(state.user)refreshInbox().catch(()=>{});}
+function card(task){return `<article class="task-card"><button class="card-hit" type="button" data-task="${e(task.id)}" aria-label="查看求助：${e(task.title)}"></button><div class="card-body"><div class="card-meta">${category(task)}${status(task)}</div><h3>${e(task.title)}</h3>${task.description?`<p class="description">${e(task.description)}</p>`:''}<div class="card-facts">${task.helpTime?`<span>${e(task.helpTime)}</span>`:''}<span>${icon('pin')}${task.mode==='online'?'线上':e(task.location)}</span><time datetime="${e(task.deadline)}">${deadline(task.deadline)}</time></div></div><div class="card-bottom"><button type="button" class="author-button" data-profile="${e(task.ownerId)}" aria-label="查看${e(task.owner.name)}的主页">${avatar(task.owner)}${e(task.owner.name)}</button><span class="card-detail-link">查看详情 ↗</span></div></article>`;}
+function searchAndFilters(){return `<label class="search">${icon('search')}<input id="search-input" type="search" aria-label="搜索求助" placeholder="搜索求助" value="${e(state.query)}" maxlength="100"></label><div class="filter-row"><div class="category-segments" role="group" aria-label="分类">${[['all','全部'],['study','学习交流'],['borrow','借点东西']].map(([key,label])=>`<button type="button" class="filter-chip ${state.category===key?'active':''}" data-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}</div><label class="open-filter"><input id="only-open" type="checkbox" ${state.onlyOpen?'checked':''}>只看待回应</label><select class="sort-select" id="sort-select" aria-label="求助排序"><option value="latest" ${state.sort==='latest'?'selected':''}>最新发布</option><option value="deadline" ${state.sort==='deadline'?'selected':''}>截止时间最近</option></select></div>`;}
+function filteredTasks(){let tasks=state.tasks.slice();if(state.view==='my'){if(!state.user)return [];tasks=tasks.filter(t=>t.ownerId===state.user.id||t.myResponse||t.helperId===state.user.id);if(state.mine==='published')tasks=tasks.filter(t=>t.ownerId===state.user.id);if(state.mine==='responded')tasks=tasks.filter(t=>t.myResponse||t.helperId===state.user.id);if(state.mine==='active')tasks=tasks.filter(t=>isParticipant(t)&&['active','review'].includes(t.status));if(state.mine==='ended')tasks=tasks.filter(t=>['completed','cancelled','expired'].includes(t.status));}else if(state.onlyOpen)tasks=tasks.filter(isOpen);return tasks.filter(t=>(state.category==='all'||t.category===state.category)&&`${t.title} ${t.description} ${t.location}`.toLowerCase().includes(state.query.trim().toLowerCase())).sort((a,b)=>state.sort==='deadline'?Date.parse(a.deadline)-Date.parse(b.deadline):Date.parse(b.createdAt)-Date.parse(a.createdAt));}
+function drawResults(){const tasks=filteredTasks();const results=$('#task-results');if(!results)return;if(tasks.length){results.innerHTML=tasks.map(card).join('');}else if(state.query){results.innerHTML=empty('没找到，换个词试试。','', '<button class="button outline" type="button" data-clear-search>清除搜索</button>');}else if(state.category!=='all'){results.innerHTML=empty('这一类暂时没有求助。','', '<button class="button outline" type="button" data-clear-filters>查看全部</button>');}else if(state.view==='my'){if(state.mine==='published')results.innerHTML=empty('你还没发过求助。','', '<button class="button primary" type="button" data-publish>发个求助</button>');else if(state.mine==='responded')results.innerHTML=empty('去看看有没有能帮的。','', '<a class="button outline" href="#plaza">去广场</a>');else results.innerHTML=empty(state.mine==='active'?'暂无进行中的互助。':'暂无已结束的互助。','', '<a class="button outline" href="#plaza">去广场</a>');}else results.innerHTML=empty('暂时没有待回应的求助。','', '<button class="button outline" type="button" data-show-all>查看全部</button>');$('#result-count').textContent=tasks.length+' 条';}
+async function drawMain(){
+ const main=$('#main');if(state.view==='profile'){drawProfile();return;}if(state.view==='messages'){await drawMessages();return;}if(state.view==='thanks'){await drawThanks();return;}
+ if(state.user&&!state.user.schoolId){main.innerHTML=`<div class="page-heading"><h1>${state.view==='my'?'我的互助':'互助角'}</h1></div>${empty('先加入学校圈','选择学校后可进入演示学校圈。', '<a class="button primary" href="#profile">选择学校</a>')}`;return;}
+ if(state.view==='my'&&!state.user){main.innerHTML=`<div class="page-heading"><h1>我的互助</h1></div>${empty('选择身份后查看自己的记录。','', '<button class="button primary" type="button" data-account>切换身份</button><button class="button outline" type="button" data-create-identity>创建身份</button>')}`;return;}
+ const mine=state.view==='my';const count=state.tasks.filter(isOpen).length;
+ main.innerHTML=`<div class="page-heading compact-heading"><h1>${mine?'我的互助':'互助角'}</h1>${mine?'':`<p>${count} 条求助待回应</p>`}</div>${mine?`<div class="my-tabs" role="group" aria-label="我的互助分类">${[['published','我的求助'],['responded','我帮的忙'],['active','进行中'],['ended','已结束']].map(([key,label])=>`<button type="button" class="filter-chip ${state.mine===key?'active':''}" data-mine="${key}" aria-pressed="${state.mine===key}">${label}</button>`).join('')}</div>`:''}<section id="plaza-section" class="feed-panel" aria-label="求助列表">${searchAndFilters()}<span id="result-count" class="result-count result-summary" role="status" aria-live="polite"></span><div id="task-results" class="task-grid"></div></section>`;
+ drawResults();
+ const completed=state.tasks.filter(t=>t.isDemo&&t.status==='completed');
+ if(!mine&&completed.length)main.insertAdjacentHTML('beforeend',`<section class="showcase"><div class="section-title"><h2>已完成的互助</h2><span>演示案例</span></div><div class="showcase-grid">${completed.map(t=>`<button class="showcase-card" type="button" data-task="${e(t.id)}"><span class="showcase-icon">${icon('heart')}</span><span class="showcase-copy"><strong>${e(t.title)}</strong><small>查看经过 ↗</small></span>${status(t)}</button>`).join('')}</div></section>`);
 }
-const entryArt = {
-  help: `<svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="6" y="7" width="66" height="65" rx="17" fill="#eee4f6"/><g stroke="#a685bc" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 36q24-38 48 0" fill="#fff9fd"/><path d="M16 36q6-7 12 0 6-7 12 0 6-7 12 0 6-7 12 0M40 18v36q0 9-8 5M40 19q-7 6-9 14m9-14q7 6 9 14"/><path d="M19 59q6-9 12-2m30 2q-6-9-12-2" stroke="#c196b2"/></g><path d="M62 17c-2-5-9-2-6 2l6 5 5-5c3-4-3-7-5-2Z" fill="#e4bbd2" stroke="#bd8eac" stroke-width="1.2"/><path d="M13 14v7m-3-3h6M64 62v7m-3-3h6" stroke="#c5abd6" stroke-width="1.4" stroke-linecap="round"/></svg>`,
-  request: `<svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="7" y="7" width="66" height="65" rx="17" fill="#f8e9f0"/><g stroke-linecap="round" stroke-linejoin="round"><path d="M27 21h29v31H27Z" fill="#fffafc" stroke="#ceb0cf" stroke-width="1.5"/><path d="M34 29h15m-15 6h12m-12 6h16" stroke="#ddc5e1" stroke-width="1.4"/><rect x="16" y="35" width="48" height="30" rx="4" fill="#f5deea" stroke="#bd8eac" stroke-width="1.6"/><path d="m18 38 22 15 22-15m-44 25 17-13m27 13L45 50" stroke="#c79bb6" stroke-width="1.5"/><path d="M41 55s-9-5-8-10c1-4 6-4 8-1 2-3 7-3 8 1 1 5-8 10-8 10Z" fill="#e7bfd5" stroke="#bd8eac" stroke-width="1.3"/><path d="M15 18v8m-4-4h8M66 28v6m-3-3h6" stroke="#d0b3dc" stroke-width="1.4"/></g></svg>`,
-};
-function card(task) {
-  return `<article class="task-card"><button type="button" class="card-hit" data-task="${e(task.id)}" aria-label="查看需求：${e(task.title)}"></button><div class="card-body"><div class="card-meta">${cat(task)}${status(task)}</div><h3>${e(task.title)}</h3><p class="description">${e(task.description)}</p><div class="tags">${task.tags.map(tag=>`<span>${e(tag)}</span>`).join('')}</div><div class="card-location">${icon('pin')}${e(task.location)}</div></div><div class="card-bottom">${avatar(task.owner)}<span>${e(task.owner.name)}</span><time datetime="${e(task.deadline)}">${isOpen(task) ? deadline(task.deadline) : names[task.status]}</time><span class="arrow" aria-hidden="true">↗</span></div></article>`;
+async function drawThanks(){const epoch=state.epoch;$('#main').innerHTML='<div class="page-heading compact-heading"><h1>写给 TA</h1></div><div class="my-tabs" role="group" aria-label="感谢分类"><button class="filter-chip '+(state.thanks==='received'?'active':'')+'" data-thanks-tab="received">收到的</button><button class="filter-chip '+(state.thanks==='sent'?'active':'')+'" data-thanks-tab="sent">发出的</button></div><div class="thanks-grid" id="thanks-results"></div>';if(!state.user){$('#thanks-results').innerHTML=empty('切换身份后查看感谢。','', '<button class="button primary" type="button" data-account>切换身份</button>');return;}try{const {tasks}=await api('/thanks');if(epoch!==state.epoch||state.view!=='thanks')return;const items=tasks.filter(t=>state.thanks==='received'?t.helperId===state.user.id:t.ownerId===state.user.id);$('#thanks-results').innerHTML=items.length?items.map(t=>`<div class="thank-entry">${thankCard(t)}<button class="text-button" type="button" data-task="${e(t.id)}">查看经过 ↗</button></div>`).join(''):empty(state.thanks==='received'?'还没有收到感谢。':'还没有写过感谢。','',state.thanks==='sent'?'<button class="button outline" type="button" data-view-completed>查看已完成</button>':'');}catch(error){if($('#thanks-results'))$('#thanks-results').innerHTML=empty('没加载出来，请重试。','', '<button class="button outline" type="button" data-retry>重试</button>');}}
+function thankCard(task){return `<article class="thank-card">${task.isDemo?'<span class="example-label">演示案例</span>':''}<span>${icon('heart')}</span><blockquote>${e(task.thanks.text)}</blockquote><p>${e(task.owner.name)} → ${e(task.helper.name)} · ${date(task.thanks.at)}</p><p>${e(task.title)}</p></article>`;}
+const actionButton=(task,action,text,style='primary',extra='')=>`<button class="button ${style}" type="button" data-action="${action}" data-id="${e(task.id)}" ${extra}>${text}</button>`;
+function detailHTML(task,result=''){
+ const own=task.ownerId===state.user?.id,helper=task.helperId===state.user?.id,member=own||helper;
+ let html=`<div class="detail-top">${category(task)}${status(task)}<button class="icon-button" data-close="detail-dialog" aria-label="关闭详情">×</button></div><h2 id="detail-title" class="detail-title">${e(task.title)}</h2><div class="detail-author"><button class="author-button" type="button" data-profile="${e(task.ownerId)}">${avatar(task.owner)}${e(task.owner.name)}</button><small>${date(task.createdAt)}</small>${own?'<span>我的求助</span>':''}</div>${result?`<p class="operation-result" role="status">${e(result)}</p>`:''}${task.isDemo?'<p class="demo-context">演示案例</p>':''}${task.description?`<section class="detail-description-section"><h3>具体说明</h3><p class="detail-description">${e(task.description)}</p></section>`:''}<div class="detail-facts">${task.helpTime?`<div><small>所需时间</small>${e(task.helpTime)}</div>`:''}<div><small>协作方式</small>${task.mode==='online'?'线上':'见面'}</div>${task.mode==='offline'?`<div><small>见面地点</small>${e(task.location)}<span class="location-guidance">请选择校园公共区域。</span></div>`:''}<div><small>回应截止</small>${date(task.deadline)}</div>${task.returnAt?`<div><small>归还时间</small>${date(task.returnAt)}</div>`:''}</div>`;
+ if(isOpen(task)){
+  if(own){const pending=task.responses.filter(r=>r.state==='pending');html+=`<section class="detail-section"><h3>回应 · ${pending.length}</h3>${pending.length?pending.map(r=>`<div class="response-item"><div class="response-person">${avatar(r.user)}${e(r.user.name)}${actionButton(task,'select','确定帮忙','primary small',`data-response="${e(r.id)}"`)}</div><p>${e(r.message)}</p></div>`).join(''):'<p class="info-line">还没有新的回应。</p>'}<div class="detail-actions">${!pending.length?`<button class="button outline" type="button" data-edit-task="${e(task.id)}">编辑</button>`:''}${actionButton(task,'cancel','取消求助','quiet')}</div></section>`;}
+  else if(task.myResponse?.state==='pending')html+=`<section class="detail-section">${result?'':'<p class="operation-result">已回应</p>'}<p class="info-line">等待发布者确认。</p>${actionButton(task,'withdraw','撤回回应','quiet')}</section>`;
+  else html+=`<section class="detail-section">${state.user?`<form class="inline-form" data-operation="respond" data-id="${e(task.id)}"><label class="field">补充一句（选填）<textarea name="message" maxlength="300" rows="2" placeholder="什么时候方便？"></textarea></label><button class="button primary" type="submit">我能帮</button></form>`:'<button class="button primary" type="button" data-account>切换身份</button>'}</section>`;
+ }
+ if(task.status==='expired')html+='<p class="info-line">已截止，不再接受回应。</p>';
+ if(member&&task.helperId){html+=`<section class="detail-section"><h3>互助进展</h3><button class="button outline" type="button" data-chat="${e(task.id)}">${icon('chat')}发私信</button>`;
+  if(task.category==='borrow'){html+=`<div class="loan-steps">${[['deliveredAt','交付物品'],['returnedAt','提交归还'],['confirmedAt','确认收到']].map(([key,label])=>`<div class="loan-step ${task.loan[key]?'done':''}">${label}${task.loan[key]?' ✓':''}</div>`).join('')}</div>`;if(task.status==='active'){if(helper&&!task.loan.deliveredAt)html+=actionButton(task,'deliver','已交付','outline');if(own&&task.loan.deliveredAt&&!task.loan.returnedAt)html+=actionButton(task,'return','已归还','outline');if(helper&&task.loan.returnedAt&&!task.loan.confirmedAt)html+=actionButton(task,'confirm-return','确认收到','primary');}}
+  if(task.cancelRequestedBy)html+=task.cancelRequestedBy===state.user.id?'<p class="info-line">取消申请已提交，等待对方确认。</p>':`<p class="info-line">对方申请取消互助。</p><div class="detail-actions">${actionButton(task,'accept-cancel','同意取消','danger')}${actionButton(task,'decline-cancel','继续互助','quiet')}</div>`;
+  else if(task.status==='active')html+=`<div class="detail-actions">${helper&&(task.category!=='borrow'||task.loan.confirmedAt)?actionButton(task,'submit','申请完成'):''}${actionButton(task,'cancel','申请取消','quiet')}</div>`;
+  else if(task.status==='review')html+=own?`<p class="info-line">对方申请完成，请确认是否解决。</p><div class="detail-actions">${actionButton(task,'complete','确认完成')}${actionButton(task,'cancel','申请取消','quiet')}</div><form class="inline-form" data-operation="redo" data-id="${e(task.id)}"><label class="field">还需要什么帮助？<textarea name="reason" required minlength="2" maxlength="300" rows="2"></textarea></label><button class="button quiet" type="submit">继续协作</button></form>`:'<p class="info-line">已申请完成，等待发布者确认。</p>';
+  html+='</section>';
+ }
+ if(task.status==='completed'){html+='<p class="operation-result">这件事已解决。</p>';if(member&&task.thanks)html+=thankCard(task);else if(own)html+=`<button class="button primary" type="button" data-thank="${e(task.id)}">说声谢谢</button>`;}
+ html+=`<section class="detail-section"><h3>进度</h3><ol class="timeline">${task.events.map(ev=>`<li>${e(ev.text)}<time>${date(ev.at)}</time></li>`).join('')}</ol></section><p class="form-error" id="detail-error" role="alert"></p>`;return html;
 }
-const empty = (title, text, action = '') => `<div class="empty-state">${icon('leaf')}<h3>${e(title)}</h3><p>${e(text)}</p>${action}</div>`;
-function searchBar() { return `<label class="search">${icon('search')}<input id="search-input" type="search" aria-label="搜索互助需求" placeholder="搜索高数、雨伞或交接地点" value="${e(state.query)}" maxlength="100"></label>`; }
-function filters() {
-  return `<div class="filter-row"><div class="category-segments" role="group" aria-label="需求分类筛选">${[['all','全部需求'],['study','学习互助'],['borrow','物品借用']].map(([key,label])=>`<button type="button" class="filter-chip ${state.category===key?'active':''}" data-category="${key}" aria-pressed="${state.category===key}">${label}</button>`).join('')}</div><span class="result-count" id="result-count" role="status" aria-live="polite" aria-atomic="true"></span><select class="sort-select" aria-label="需求排序" id="sort-select"><option value="latest" ${state.sort==='latest'?'selected':''}>最新发布</option><option value="deadline" ${state.sort==='deadline'?'selected':''}>截止时间最近</option></select></div>`;
-}
-function drawResults() {
-  let tasks = [...state.tasks];
-  if (state.view === 'plaza' && !state.allStates) tasks = tasks.filter(isOpen);
-  if (state.view === 'my') {
-    tasks = tasks.filter(t => state.user && (t.ownerId === state.user.id || t.myResponse));
-    if (state.mine === 'published') tasks = tasks.filter(t => t.ownerId === state.user?.id);
-    if (state.mine === 'responded') tasks = tasks.filter(t => t.myResponse);
-  }
-  tasks = tasks.filter(t => (state.category === 'all' || t.category === state.category) && `${t.title} ${t.description} ${t.location} ${t.tags.join(' ')}`.toLowerCase().includes(state.query.trim().toLowerCase()));
-  tasks.sort((a,b)=>state.sort === 'deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline) : Date.parse(b.createdAt)-Date.parse(a.createdAt));
-  $('#result-count').textContent = `${tasks.length} 条`;
-  $('#task-results').innerHTML = tasks.length ? tasks.map(card).join('') : (state.view==='my' && !state.query && state.category==='all' ? empty('下一件小事，从这里开始', '你参与的互助会保存在这里。可以去帮一位同学，也可以说出自己的需要。', '<a class="button primary" href="#plaza">去看看谁需要帮助</a><button class="button outline" type="button" data-publish>发布需求</button>') : empty('换个词，也许就遇见了', '试试“高数”“雨伞”，或清除筛选看看其他需求。', '<button class="button primary" type="button" data-reset-search>清除搜索与筛选</button><button class="button outline" type="button" data-publish>发布我的需求</button>'));
-}
-function drawMain() {
-  drawNavigation();
-  const main = $('#main');
-  if (state.view === 'thanks') { drawThanks(); return; }
-  if (state.view === 'my' && !state.user) {
-    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>查看自己发布和参与的每一件小事。</p></div>${empty('先认识一下你吧', '选择一个身份，体验发布、响应和协作。也可以先看看进行中的示例。', '<button class="button primary" type="button" data-account>选择演示身份</button><button class="button outline" type="button" data-task="demo-active">看看协作示例</button>')}`;
-    return;
-  }
-  const available = state.tasks.filter(isOpen);
-  const feed = `<section id="plaza-section" class="feed-panel" aria-label="互助需求"><div class="section-top"><div class="section-title"><h2>${state.view==='my'?'互助记录':'发现互助需求'}</h2><span>${state.view==='my'?'查看进展，继续协作':'从你能做到的一件小事开始'}</span></div>${searchBar()}</div>${filters()}${state.view==='plaza'?`<div class="filter-row archive-filter"><button class="text-button" id="toggle-closed" type="button">${state.allStates?'☑ 正在显示全部状态':'□ 同时查看已结束的需求'}</button></div>`:''}<div class="task-grid" id="task-results"></div></section>`;
-  if (state.view === 'plaza') {
-    const chinaDay = new Date(Date.now()+8*3600000);
-    const daysSinceMonday = (chinaDay.getUTCDay()+6)%7;
-    const weekMs = Date.UTC(chinaDay.getUTCFullYear(),chinaDay.getUTCMonth(),chinaDay.getUTCDate()-daysSinceMonday)-8*3600000;
-    const finished = state.tasks.filter(t=>t.status==='completed' && Date.parse(t.completedAt)>=weekMs).length;
-    const examples = state.tasks.filter(t=>['demo-active','demo-completed'].includes(t.id));
-    main.innerHTML = `<section class="plaza-intro"><div class="intro-copy"><span class="eyebrow">一点善意，让校园更近一点</span><h1>需要帮忙？<span>刚好有我。</span></h1><p>找到一份你能帮上的小事，也让自己的需要被看见。</p><div class="intro-stats"><span><b>${available.length}</b> 个需求可响应</span><span>本周完成 <b>${finished}</b> 次</span><small>本站演示数据</small></div></div><section class="intro-action" aria-label="发布需求"><span class="publish-art" aria-hidden="true">${entryArt.request}</span><div><h2>把需要说出来。</h2><p>从身边的一件小事开始。</p><button type="button" class="button primary" data-publish>发布一份需求 ${icon('plus')}</button></div></section></section>${feed}<section class="showcase" aria-label="互助流程演示案例"><div class="section-title"><h2>小事有回应，善意有回响。</h2><span>以下为流程演示案例</span></div><div class="showcase-grid">${examples.map(t=>`<button type="button" class="showcase-card" data-task="${e(t.id)}" aria-label="查看演示案例：${e(t.title)}"><span class="showcase-icon">${icon(t.status==='completed'?'heart':'book')}</span><span class="showcase-copy">${status(t)}<strong>${e(t.title)}</strong><small>${t.status==='completed'?'一次互助完成，一句谢谢被认真留下。':'已经找到彼此，正在一起解决小问题。'}</small></span><span class="showcase-arrow" aria-hidden="true">↗</span></button>`).join('')}</div></section>`;
-  } else {
-    main.innerHTML = `<div class="page-heading"><span class="eyebrow">YOUR CONTRIBUTIONS</span><h1>我的互助</h1><p>${e(state.user.name)}，查看你发布和参与的需求，继续未完成的协作。</p></div><div class="filter-row">${[['all','全部参与'],['published','我发布的'],['responded','我响应的']].map(([k,l])=>`<button class="filter-chip ${state.mine===k?'active':''}" data-mine="${k}" type="button">${l}</button>`).join('')}</div>${feed}`;
-  }
-  drawResults();
-}
-let thanksDraw = 0;
-async function drawThanks() {
-  const version = ++thanksDraw;
-  $('#main').innerHTML = `<div class="page-heading"><span class="eyebrow">A NOTE TO REMEMBER</span><h1>把谢谢，认真留下来。</h1><p>互助完成后的一句感谢，只在你们之间传递。</p></div><div class="thanks-grid" id="thanks-results"></div>`;
-  if (!state.user) { $('#thanks-results').innerHTML = empty('你的感谢卡，等你来打开', '选周同学或许同学，就能打开一张示例感谢卡，体验帮助完成后的温暖。', '<button class="button primary" data-account type="button">选择身份，打开感谢</button><a class="button outline" href="#plaza">先去看看互助</a>'); return; }
-  try {
-    const { tasks } = await api('/thanks');
-    if (state.view !== 'thanks' || version !== thanksDraw) return;
-    $('#thanks-results').innerHTML = tasks.length ? tasks.map(task=>`<div class="thank-entry">${thankCard(task)}<button class="text-button" data-task="${e(task.id)}" type="button">查看这次互助 ↗</button></div>`).join('') : empty('第一张感谢卡，从一次帮助开始', '完成一次帮助，就能认真留下一句谢谢。切换到周同学或许同学，还能先看看示例卡片。', '<a class="button primary" href="#plaza">去看看谁需要帮助</a><button class="button outline" type="button" data-account>切换身份看示例</button>');
-  } catch (err) { if ($('#thanks-results')) $('#thanks-results').innerHTML = empty('暂时没有打开感谢卡',err.message); }
-}
-function thankCard(task) { return `<article class="thank-card"><span class="eyebrow">${task.isDemo?'一张示例感谢卡':'一次帮助，一份被记住的温暖'}</span><span>${icon('heart')}</span><blockquote>${e(task.thanks.text)}</blockquote><p>${e(task.owner.name)} → ${e(task.helper.name)} · ${date(task.thanks.at)}</p><p>关于「${e(task.title)}」</p></article>`; }
-async function reload() { const [me, list] = await Promise.all([api('/me'),api('/tasks')]); state.user=me.user; state.tasks=list.tasks; drawMain(); }
-async function openAccounts() {
-  try {
-    const { accounts } = await api('/demo-accounts');
-    $('#accounts').innerHTML = accounts.length ? accounts.map(u=>`<button class="account-option" type="button" data-login="${e(u.id)}">${avatar(u)}<span>${e(u.name)}<small>${e(u.bio)}</small></span><span class="current">${state.user?.id===u.id?'当前身份':'选择 ↗'}</span></button>`).join('') : '<p>演示登录已关闭。</p>';
-    openDialog('account-dialog');
-  } catch(err) { toast(err.message); }
-}
-function localInputDate(ms) { const d = new Date(ms); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); }
-function openPublish() {
-  if (!requireUser()) { toast('选择身份后，再点击发布需求'); return; }
-  const form=$('#publish-form'); form.reset(); $('#publish-error').textContent='';
-  form.elements.deadline.min=localInputDate(Date.now()+60000); form.elements.deadline.value=localInputDate(Date.now()+86400000);
-  form.elements.returnAt.value=localInputDate(Date.now()+172800000); updateFields(); openDialog('publish-dialog');
-}
-function updateFields() {
-  const form=$('#publish-form'), loan=form.elements.category.value==='borrow';
-  if(loan) form.elements.mode.value='offline';
-  form.elements.mode.disabled=loan;
-  $('#return-field').hidden=!loan; form.elements.returnAt.required=loan;
-  $('#location-field').hidden=form.elements.mode.value==='online'; form.elements.location.required=form.elements.mode.value!=='online';
-}
-const actionButton = (task, action, text, style='primary', extra='') => `<button type="button" class="button ${style}" data-action="${action}" data-id="${e(task.id)}" ${extra}>${text}</button>`;
-function detailHTML(task) {
-  const owner=state.user?.id===task.ownerId, helper=state.user?.id===task.helperId, participant=owner||helper;
-  let html=`<div class="detail-top">${cat(task)}${status(task)}<button class="icon-button" data-close="detail-dialog" aria-label="关闭需求详情">×</button></div><h2 id="detail-title" class="detail-title">${e(task.title)}</h2><div class="detail-author">${avatar(task.owner)}<span>${e(task.owner.name)} 发布</span><small>${date(task.createdAt)}</small></div>${task.isDemo?'<p class="demo-context">流程演示案例 · 可以切换身份体验每一步</p>':''}<p class="detail-description">${e(task.description)}</p><div class="detail-facts"><div><small>协作区域</small>${e(task.location)}${task.mode==='offline'?'<span class="location-guidance">建议在明亮、人多的校园公共区域交接。</span>':''}</div><div><small>响应截止</small>${date(task.deadline)}</div>${task.returnAt?`<div><small>预计归还</small>${date(task.returnAt)}</div>`:''}${task.helper?`<div><small>这次的帮助者</small>${e(task.helper.name)}</div>`:''}</div>`;
-  if (isOpen(task)) {
-    if (owner) {
-      html+=`<section class="detail-section"><h3>愿意帮忙的同学 · ${task.responseCount}</h3>`;
-      const pending=task.responses.filter(r=>r.state==='pending');
-      html+=pending.length ? pending.map(r=>`<div class="response-item"><div class="response-person">${avatar(r.user)}${e(r.user.name)}${actionButton(task,'select','请这位同学帮忙','primary small',`data-response="${e(r.id)}"`)}</div><p>${e(r.message)}</p></div>`).join('') : '<p class="info-line">需求已经发布，等待合适的同学看见。</p>';
-      html+=`<div class="detail-actions">${actionButton(task,'cancel','取消这条需求','quiet')}</div></section>`;
-    } else if (task.myResponse?.state==='pending') {
-      html+=`<section class="detail-section"><h3>你的帮助意愿已送达</h3><p class="info-line">${e(task.myResponse.message)}<br>等待发起人确认，请先不要直接行动。</p>${actionButton(task,'withdraw','撤回响应','quiet')}</section>`;
-    } else {
-      html+=`<section class="detail-section"><h3>刚好你可以帮上忙？</h3>${state.user?`<form class="inline-form" data-operation="respond" data-id="${e(task.id)}"><textarea name="message" aria-label="响应说明" placeholder="说说你能提供的帮助和方便的时间…" required minlength="2" maxlength="300"></textarea><button class="button primary" type="submit">我可以帮忙 ↗</button></form>`:'<p class="info-line">先选择一个演示身份，就能回应这份需求。</p><button class="button primary" type="button" data-account>选择身份，参与帮助</button>'}</section>`;
-    }
-  }
-  if (participant && task.helperId) {
-    html+=`<section class="detail-section"><h3>你们的协作区 <small>仅互助双方可见</small></h3>`;
-    if (task.category==='borrow') {
-      html+=`<div class="loan-steps">${[['deliveredAt','① 交付物品'],['returnedAt','② 提交归还'],['confirmedAt','③ 确认收到']].map(([k,t])=>`<div class="loan-step ${task.loan[k]?'done':''}">${t}${task.loan[k]?' ✓':''}</div>`).join('')}</div>`;
-      if (task.status==='active') {
-        if(helper&&!task.loan.deliveredAt)html+=actionButton(task,'deliver','已当面交付物品','outline');
-        if(owner&&task.loan.deliveredAt&&!task.loan.returnedAt)html+=actionButton(task,'return','我已归还物品','outline');
-        if(helper&&task.loan.returnedAt&&!task.loan.confirmedAt)html+=actionButton(task,'confirm-return','确认收到归还物品','outline');
-      }
-    }
-    html+=task.messages.length?task.messages.map(m=>`<div class="message ${m.userId===state.user.id?'mine':''}"><small>${e(m.user.name)} · ${date(m.at)}</small>${e(m.text)}</div>`).join(''):'<p class="info-line">在这里约定时间、交接方式，或补充需要的帮助。</p>';
-    if (['active','review'].includes(task.status)) html+=`<form class="inline-form" data-operation="message" data-id="${e(task.id)}"><textarea name="text" aria-label="协作留言" placeholder="给对方留句话…" required maxlength="500"></textarea><button type="submit" class="button quiet">发送留言</button></form>`;
-    if (task.cancelRequestedBy) {
-      html+='<p class="info-line">有一份待处理的取消申请。借用物品已交付时，需先归还再确认取消。</p>';
-      html+=task.cancelRequestedBy===state.user.id?'<p class="info-line">已申请取消，等待对方处理。</p>':`<div class="detail-actions">${actionButton(task,'accept-cancel','同意取消','danger')}${actionButton(task,'decline-cancel','继续互助','quiet')}</div>`;
-    } else if (task.status==='active') {
-      html+='<div class="detail-actions">';
-      if(helper&&(task.category!=='borrow'||task.loan.confirmedAt))html+=actionButton(task,'submit','这次帮助完成了 ✓');
-      html+=actionButton(task,'cancel','协商取消','quiet')+'</div>';
-    } else if (task.status==='review') {
-      html+=owner?`<p class="info-line">对方已提交完成，请确认事情是否解决。</p><div class="detail-actions">${actionButton(task,'complete','确认完成 ✓')}${actionButton(task,'cancel','协商取消','quiet')}</div><details><summary class="text-button">还需要一点帮助？</summary><form class="inline-form" data-operation="redo" data-id="${e(task.id)}"><textarea name="reason" aria-label="继续协作的说明" placeholder="说说还有什么需要继续完成…" required minlength="2" maxlength="300"></textarea><button type="submit" class="button quiet">说明情况，继续协作</button></form></details>`:'<p class="info-line">完成申请已发送，等待发起人确认。</p>';
-    }
-    html+='</section>';
-  }
-  if (task.status==='completed'&&participant) {
-    html+='<section class="detail-section"><h3>谢谢，让这次互助有了温度</h3>';
-    if(task.thanks)html+=thankCard(task);
-    else if(owner)html+=`<p class="info-line">这张卡片只会送给帮助你的同学。</p><form class="inline-form" data-operation="thank" data-id="${e(task.id)}"><textarea name="text" aria-label="感谢的话" placeholder="写下你想对 TA 说的谢谢…" required minlength="2" maxlength="300"></textarea><button type="submit" class="button primary">送出这张感谢卡 ♡</button></form>`;
-    else html+='<p class="info-line">你们已完成这次互助。如果对方送出感谢，会出现在这里。</p>';
-    html+='</section>';
-  }
-  html+=`<section class="detail-section"><h3>这份善意的进展</h3><ol class="timeline">${task.events.map(ev=>`<li>${e(ev.text)}<time>${date(ev.at)}</time></li>`).join('')}</ol></section>`;
-  return html;
-}
-async function openDetail(id) {
-  try { const { task }=await api('/tasks/'+encodeURIComponent(id)); state.detail=task; $('#detail-content').innerHTML=detailHTML(task); openDialog('detail-dialog'); }
-  catch(err){toast(err.message);}
-}
+async function openDetail(id,result=''){const epoch=state.epoch;$('#detail-content').innerHTML='<div class="dialog-head"><h2 id="detail-title">查看详情</h2><button class="icon-button" data-close="detail-dialog" aria-label="关闭详情">×</button></div><div class="loading">正在加载…</div>';openDialog('detail-dialog');try{const {task}=await api('/tasks/'+encodeURIComponent(id));if(epoch!==state.epoch)return;state.detail=task;$('#detail-content').innerHTML=detailHTML(task,result);}catch(error){if(epoch!==state.epoch)return;$('#detail-content').innerHTML=`<div class="dialog-head"><h2 id="detail-title">没加载出来，请重试。</h2><button class="icon-button" data-close="detail-dialog" aria-label="关闭详情">×</button></div><p>${e(error.message)}</p><button class="button outline" type="button" data-task="${e(id)}">重试</button>`;}}
 let busy=false;
-async function runAction(id,body,button) {
-  if(busy)return; busy=true; if(button)button.disabled=true;
-  try {
-    const { task }=await api('/tasks/'+encodeURIComponent(id)+'/action',body);
-    state.detail=task; await reload(); $('#detail-content').innerHTML=detailHTML(task);
-    toast({ respond:'帮助意愿已送达，等待对方确认',select:'找到彼此了，可以在协作区留言',complete:'互助完成，送给对方一句感谢吧',thank:'这张感谢卡已送达',message:'留言已发送',return:'已提交归还，等待出借方确认' }[body.action]||'进展已更新');
-  } catch(err){toast(err.message);} finally{busy=false;if(button)button.disabled=false;}
-}
-document.addEventListener('click', async event=>{
-  const button=event.target.closest('button,a'); if(!button)return;
-  if(button.dataset.close){$('#'+button.dataset.close).close();return;}
-  if(button.hasAttribute('data-about')){openDialog('about-dialog');return;}
-  if(button.hasAttribute('data-account')){openAccounts();return;}
-  if(button.hasAttribute('data-publish')){openPublish();return;}
-  if(button.hasAttribute('data-explore')){$('#plaza-section')?.scrollIntoView({behavior:'smooth'});$('#search-input')?.focus({preventScroll:true});return;}
-  if(button.dataset.task){openDetail(button.dataset.task);return;}
-  if(button.dataset.login){
-    button.disabled=true;
-    try{const {user}=await api('/login',{userId:button.dataset.login});state.user=user;drawNavigation();$('#account-dialog').close();$('#detail-dialog').close();$('#publish-dialog').close();await reload();toast('现在以'+state.user.name+'的身份体验');}catch(err){toast(err.message);}finally{button.disabled=false;}return;
-  }
-  if(button.dataset.category){state.category=button.dataset.category;drawMain();document.querySelector('[data-category="'+state.category+'"]')?.focus({preventScroll:true});return;}
-  if(button.dataset.mine){state.mine=button.dataset.mine;drawMain();document.querySelector('[data-mine="'+state.mine+'"]')?.focus({preventScroll:true});return;}
-  if(button.id==='toggle-closed'){state.allStates=!state.allStates;drawMain();$('#toggle-closed')?.focus({preventScroll:true});return;}
-  if(button.hasAttribute('data-reset-search')){state.query='';state.category='all';state.mine='all';drawMain();$('#search-input')?.focus();return;}
-  if(button.dataset.action){
-    const action=button.dataset.action;
-    if(['select','cancel','accept-cancel','complete','deliver','return','confirm-return'].includes(action)&&!confirm({select:'确定选择这位同学？确认后将停止接收其他响应。',cancel:'确定取消或申请协商取消这次互助？', 'accept-cancel':'确定同意取消这次互助？',complete:'请确认这次需求已经解决。确认完成？',deliver:'请确认物品已经交给借用同学。',return:'请确认物品已经归还给出借同学。','confirm-return':'请确认已经收到归还的物品。'}[action]))return;
-    runAction(button.dataset.id,{action,responseId:button.dataset.response},button);
-  }
+async function runAction(id,body,button){if(busy)return;const epoch=state.epoch;busy=true;if(button)button.disabled=true;try{const {task}=await api('/tasks/'+encodeURIComponent(id)+'/action',body);if(epoch!==state.epoch)return;state.detail=task;await reload();if(epoch!==state.epoch)return;if($('#detail-dialog').open)$('#detail-content').innerHTML=detailHTML(task,{respond:'已回应',withdraw:'已撤回',select:'已确定帮助者',complete:'已完成',thank:'已发送',cancel:task.status==='cancelled'?'已取消':'已提交取消申请',return:'已提交归还，等待确认', 'confirm-return':'已确认收到'}[body.action]||'已保存');toast({respond:'已回应',complete:'已完成',thank:'已发送',cancel:'已保存'}[body.action]||'已保存');}catch(error){if(epoch!==state.epoch)return;if($('#detail-error'))$('#detail-error').textContent=error.message;else toast(error.message);}finally{busy=false;if(button)button.disabled=false;}}
+function localInput(ms){const d=new Date(ms);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+function updateFields(){const form=$('#publish-form'),borrow=form.elements.category.value==='borrow';form.elements.title.placeholder=borrow?'想借一把螺丝刀':'想请人讲一道 C++ 题';form.elements.description.placeholder=borrow?'有什么要求？何时用、何时还？':'卡在哪里？什么时候方便？';if(borrow)form.elements.mode.value='offline';form.elements.mode.disabled=borrow;$('#return-field').hidden=!borrow;form.elements.returnAt.required=borrow;$('#location-field').hidden=form.elements.mode.value==='online';form.elements.location.required=form.elements.mode.value==='offline';}
+async function openPublish(editId){const epoch=state.epoch;if(!state.user){await openIdentity();return;}if(!state.user.schoolId){location.hash='#profile';toast('请先加入学校圈');return;}const form=$('#publish-form');form.reset();delete form.dataset.editId;$('#publish-error').textContent='';$('#publish-title').textContent=editId?'编辑':'发个求助';form.querySelector('button[type=submit]').textContent=editId?'保存':'发布';form.elements.deadline.value=localInput(Date.now()+86400000);form.elements.deadline.min=localInput(Date.now()+60000);form.elements.returnAt.value=localInput(Date.now()+172800000);if(editId){try{const {task}=await api('/tasks/'+editId);if(epoch!==state.epoch)return;for(const name of ['title','description','category','mode','location','helpTime'])form.elements[name].value=task[name]||'';form.elements.deadline.value=localInput(Date.parse(task.deadline));if(task.returnAt)form.elements.returnAt.value=localInput(Date.parse(task.returnAt));form.dataset.editId=editId;}catch(error){toast(error.message);return;}}updateFields();openDialog('publish-dialog');}
+function chooseDeadline(value){const form=$('#publish-form');if(value==='custom'){form.elements.deadline.focus();return;}let end=Date.now()+Number(value)*3600000;if(value==='tonight'){const d=new Date();d.setHours(23,0,0,0);end=d.getTime();if(end<Date.now()+60000)end=Date.now()+3600000;}if(value==='tomorrow')end=Date.now()+86400000;form.elements.deadline.value=localInput(end);if(form.elements.category.value==='borrow'&&Date.parse(form.elements.returnAt.value)<=end)form.elements.returnAt.value=localInput(end+86400000);}
+function openThank(id){const task=state.tasks.find(t=>t.id===id)||state.detail;$('#thank-form').reset();$('#thank-form').dataset.taskId=id;$('#thank-recipient').textContent=task?.helper?'给 '+task.helper.name:'';$('#thank-error').textContent='';openDialog('thank-dialog');}
+function currentRoute(){const [view='plaza',sub]=location.hash.slice(1).split('/');state.view=['plaza','my','thanks','messages','profile'].includes(view)?view:'plaza';state.subroute=sub||'';}
+async function route(){const previous=state.subroute;currentRoute();if(previous!==state.subroute)state.pendingFile=null;drawNavigation();await drawMain();}
+function failMain(error){$('#main').innerHTML=empty('没加载出来，请重试。',error.message,'<button class="button outline" type="button" data-retry>重试</button>');}
+
+document.addEventListener('click',async event=>{const button=event.target.closest('button,a');if(!button)return;
+ if(button.dataset.close){$('#'+button.dataset.close).close();return;}
+ if(button.hasAttribute('data-about')){openDialog('about-dialog');return;}
+ if(button.hasAttribute('data-account')){await openIdentity();return;}
+ if(button.hasAttribute('data-create-identity')){await openIdentity('create');return;}
+ if(button.dataset.task){await openDetail(button.dataset.task);return;}
+ if(button.dataset.profile){await openPublicProfile(button.dataset.profile);return;}
+ if(button.hasAttribute('data-publish')){await openPublish();return;}
+ if(button.dataset.editTask){await openPublish(button.dataset.editTask);return;}
+ if(button.dataset.deadline){chooseDeadline(button.dataset.deadline);return;}
+ if(button.dataset.category){state.category=button.dataset.category;drawMain();$('[data-category="'+state.category+'"]')?.focus({preventScroll:true});return;}
+ if(button.dataset.mine){state.mine=button.dataset.mine;state.query='';state.category='all';drawMain();$('[data-mine="'+state.mine+'"]')?.focus({preventScroll:true});return;}
+ if(button.hasAttribute('data-clear-search')){state.query='';$('#search-input').value='';drawResults();$('#search-input').focus();return;}
+ if(button.hasAttribute('data-clear-filters')){state.category='all';state.query='';drawMain();return;}
+ if(button.hasAttribute('data-show-all')){state.onlyOpen=false;drawMain();return;}
+ if(button.hasAttribute('data-retry')){reload().catch(failMain);return;}
+ if(button.dataset.thanksTab){state.thanks=button.dataset.thanksTab;drawThanks();return;}
+ if(button.hasAttribute('data-view-completed')){state.mine='ended';location.hash='#my';if(state.view==='my')drawMain();return;}
+ if(button.dataset.thank){openThank(button.dataset.thank);return;}
+ if(button.dataset.chat){$('#detail-dialog').close();location.hash='#messages/'+button.dataset.chat;return;}
+ if(button.dataset.action){const action=button.dataset.action;const confirmations={select:'确定由这位同学帮忙？',cancel:'确定取消或申请取消这次互助？','accept-cancel':'确定同意取消？',complete:'确认这件事已解决？',deliver:'确认物品已交给对方？',return:'确认已提交归还物品？','confirm-return':'确认已经收到归还的物品？'};if(confirmations[action]&&!confirm(confirmations[action]))return;runAction(button.dataset.id,{action,responseId:button.dataset.response},button);}
 });
-document.addEventListener('submit',event=>{
-  const form=event.target;
-  if(!form.dataset.operation)return;
-  event.preventDefault();const body=Object.fromEntries(new FormData(form));body.action=form.dataset.operation;
-  runAction(form.dataset.id,body,$('button[type=submit]',form));
-});
+$('#profile-button').addEventListener('click',()=>openIdentity());$('#publish-top').addEventListener('click',()=>openPublish());
 $('#publish-form').addEventListener('change',updateFields);
-$('#publish-form').addEventListener('submit',async event=>{
-  event.preventDefault(); const form=event.target, button=$('button[type=submit]',form);button.disabled=true;$('#publish-error').textContent='';
-  try{
-    const body=Object.fromEntries(new FormData(form)); body.mode=form.elements.mode.value;
-    body.deadline=new Date(body.deadline).toISOString(); body.returnAt=body.category==='borrow'?new Date(body.returnAt).toISOString():null;
-    const {task}=await api('/tasks',body);$('#publish-dialog').close();state.category='all';state.query='';await reload();await openDetail(task.id);toast('需求已发布，等一个刚好能帮忙的同学');
-  }catch(err){$('#publish-error').textContent=err.message;}finally{button.disabled=false;}
-});
+$('#publish-form').addEventListener('submit',async event=>{event.preventDefault();const epoch=state.epoch;const form=event.target,submit=$('button[type=submit]',form),body=Object.fromEntries(new FormData(form));$('#publish-error').textContent='';if(!body.title?.trim()||body.title.trim().length<2){$('#publish-error').textContent='请写明需要的帮助。';form.elements.title.focus();return;}if(Date.parse(body.deadline)<=Date.now()||!body.deadline){$('#publish-error').textContent='请选择之后的时间。';form.elements.deadline.focus();return;}if(form.elements.mode.value==='offline'&&(!body.location||body.location.trim().length<2)){$('#publish-error').textContent='请选择校园公共区域。';form.elements.location.focus();return;}if(body.category==='borrow'&&(!body.returnAt||Date.parse(body.returnAt)<=Date.parse(body.deadline))){$('#publish-error').textContent='归还时间应晚于回应截止时间。';form.elements.returnAt.focus();return;}submit.disabled=true;try{body.mode=form.elements.mode.value;body.deadline=new Date(body.deadline).toISOString();body.returnAt=body.category==='borrow'?new Date(body.returnAt).toISOString():null;const edit=form.dataset.editId;const {task}=await api(edit?'/tasks/'+edit+'/edit':'/tasks',body);if(epoch!==state.epoch)return;form.closest('dialog').close();await reload();if(epoch!==state.epoch)return;await openDetail(task.id,edit?'已保存':'已发布');toast(edit?'已保存':'已发布');}catch(error){if(epoch!==state.epoch)return;$('#publish-error').textContent=error.message||'没发出去，请重试。';}finally{submit.disabled=false;}});
+$('#thank-form').addEventListener('submit',async event=>{event.preventDefault();const epoch=state.epoch;const form=event.target,button=$('button[type=submit]',form);button.disabled=true;try{const {task}=await api('/tasks/'+form.dataset.taskId+'/action',{action:'thank',text:form.elements.text.value});if(epoch!==state.epoch)return;$('#thank-dialog').close();await reload();if(epoch!==state.epoch)return;if($('#detail-dialog').open){state.detail=task;$('#detail-content').innerHTML=detailHTML(task,'已发送');}toast('已发送');}catch(error){if(epoch!==state.epoch)return;$('#thank-error').textContent=error.message;}finally{button.disabled=false;}});
+document.addEventListener('submit',event=>{const form=event.target;if(!form.dataset.operation)return;event.preventDefault();const data=Object.fromEntries(new FormData(form));data.action=form.dataset.operation;if(data.action==='respond')data.message=data.message||'我可以帮。';runAction(form.dataset.id,data,$('button[type=submit]',form));});
 $('#main').addEventListener('input',event=>{if(event.target.id==='search-input'){state.query=event.target.value;drawResults();}});
-$('#main').addEventListener('change',event=>{if(event.target.id==='sort-select'){state.sort=event.target.value;drawResults();}});
-$('#profile-button').addEventListener('click',openAccounts);
-$('#publish-top').addEventListener('click',openPublish);
-$('#about-footer').addEventListener('click',()=>openDialog('about-dialog'));
-$('#logout-button').addEventListener('click',async()=>{try{await api('/logout',{});$('#account-dialog').close();$('#detail-dialog').close();$('#publish-dialog').close();await reload();toast('已退出演示身份');}catch(err){toast(err.message);}});
-function route(){state.view=['my','thanks'].includes(location.hash.slice(1))?location.hash.slice(1):'plaza';state.category='all';state.query='';drawMain();}
-window.addEventListener('hashchange',route);
-document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'){try{await reload();if($('#detail-dialog').open&&state.detail)await openDetail(state.detail.id);}catch{}}});
-state.view=['my','thanks'].includes(location.hash.slice(1))?location.hash.slice(1):'plaza';
-reload().catch(err=>{$('#main').innerHTML=`<div class="empty-state error-state"><h3>暂时没有连接到校园</h3><p>${e(err.message)}</p><button class="button outline" id="retry-button" type="button">重新连接</button></div>`;$('#retry-button').addEventListener('click',()=>location.reload());});
+$('#main').addEventListener('change',event=>{if(event.target.id==='only-open'){state.onlyOpen=event.target.checked;drawResults();}if(event.target.id==='sort-select'){state.sort=event.target.value;drawResults();}});
+window.addEventListener('hashchange',()=>route().catch(failMain));
+window.addEventListener('DOMContentLoaded',()=>{currentRoute();reload().catch(failMain);setInterval(()=>{if(document.visibilityState==='visible'&&state.user)refreshInbox({quiet:true}).catch(()=>{});},15000);});
+
+window.addEventListener('storage',event=>{if(event.key==='island-session-change'){resetPrivateState(false);reload().catch(failMain);}});
+document.addEventListener('visibilitychange',async()=>{if(document.visibilityState!=='visible')return;try{const me=await api('/me');if(me.user?.id!==state.user?.id||me.user?.schoolId!==state.user?.schoolId){resetPrivateState(false);await reload();}}catch{}});

@@ -6,7 +6,7 @@ import { launchAddress } from '../lib/local-address.mjs';
 const { port, host, url, lan } = launchAddress();
 const app = createApp({ dataFile: process.env.DATA_FILE ? resolve(process.env.DATA_FILE) : undefined, demo: process.env.DEMO_MODE !== 'false' });
 app.listen(port, host, () => {
-  console.log(`\n善意同行已启动：${url}\n请保留这个窗口。关闭窗口或按 Ctrl+C 可以停止。\n`);
+  console.log(`\n校园岛已启动：${url}\n请保留这个窗口。关闭窗口或按 Ctrl+C 可以停止。\n`);
   if (lan) console.log(`手机访问：${url}\n手机与电脑需连接同一 Wi-Fi。若无法访问，可让电脑连接手机热点后重启此入口。\n此模式使用共享演示账号，请只用于可信网络中的演示。\n`);
   if (process.env.BROWSER === 'none') return;
   const commands = process.platform === 'win32'

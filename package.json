@@ -1,8 +1,8 @@
 {
-  "name": "campus-kindness",
+  "name": "campus-island",
   "version": "0.1.0",
   "private": true,
-  "description": "善意同行 校园互助比赛演示版",
+  "description": "校园岛 校园互助比赛演示版",
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
