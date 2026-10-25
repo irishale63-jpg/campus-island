@@ -7,6 +7,7 @@ CREATE TABLE `kindness_rate_buckets` (
 CREATE TABLE `kindness_sessions` (
 	`token` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
+	`owned_ids` text DEFAULT '[]' NOT NULL,
 	`until` integer NOT NULL
 );
 --> statement-breakpoint

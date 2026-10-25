@@ -82,7 +82,7 @@ test('cloud: upgrading an existing database retains requests and inserts example
     const old = {version:1,tasks:[custom],notes:['保留其他字段']};
     await db.prepare('INSERT INTO kindness_state (id, body, revision) VALUES (1, ?, 0)').bind(JSON.stringify(old)).run();
     const first = await withStore(db, store => structuredClone(store));
-    assert.deepEqual(first.tasks.find(t=>t.id===custom.id),custom);
+    assert.deepEqual(first.tasks.find(t=>t.id===custom.id),{...custom,schoolId:'ccnu',circleMode:'demo'});
     assert.deepEqual(first.notes,old.notes);
     assert.equal(first.tasks.length,3);
     const second = await withStore(db, store => structuredClone(store));
