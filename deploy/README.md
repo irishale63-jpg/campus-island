@@ -1,25 +1,38 @@
-# 云端演示版
+# 校园岛：云端部署
 
-公开网址：https://campus-kindness-cjq.round-bell-5229.chatgpt.site
+公开体验：[打开校园岛](https://campus-kindness-cjq.round-bell-5229.chatgpt.site)。原网址保留。
 
-Sites 项目：`appgprj_6adcd5b8b8f081918b8bb55dcb3c4e99`，初次发布为版本 1。
+Sites 项目：appgprj_6adcd5b8b8f081918b8bb55dcb3c4e99。
 
-云端版本沿用 `public/` 的界面与 `lib/domain.mjs` 的业务规则，使用 `lib/cloud-api.mjs` 提供 Fetch API 接口。`schema.sql` 是首次建库的表结构参考；正式托管的版本使用 Sites 仓库中 Drizzle 生成的迁移，已应用迁移不能改写。
+## 共享业务与持久化
 
-## 数据与会话
+本机与云端使用同一 lib/application.mjs、lib/domain.mjs、lib/identity.mjs，统一接口、状态规则和权限。云端适配器 lib/cloud-api.mjs 使用：
 
-- Cloudflare D1 的 `kindness_state` 表存储互助数据；带 revision 的条件更新防止多人同时操作互相覆盖。
-- 仅数据库没有状态记录时加载示例数据；重新构建与部署不重置需求、留言或感谢。
-- 后续版本会一次性补入带标识的进行中、已完成流程案例；用固定示例 ID 和版本标记避免重复插入，不替换已有需求或对话。
-- `kindness_sessions` 保存会话，HTTPS 会话 cookie 设置 HttpOnly、SameSite=Strict、Secure。
-- 演示访客共用三个身份，不具备正式用户之间的身份隔离。页面已明确提示只填写模拟内容。
-- 云端包含写入频率与演示容量限制。未实现正式账号注册、运营审核和完整生产服务能力。
-- 本地 `data/` 不上传；与云端演示数据库相互独立。
+- D1 DB：kindness_state 保存带 revision 的状态快照，条件更新重试避免并发互相覆盖。
+- D1 kindness_sessions：保存 HttpOnly、SameSite=Strict、HTTPS Secure 会话，owned_ids 关联设备拥有的独立身份。
+- R2 BUCKET：保存私信图片，数据库只存元信息。图片由带权限校验的接口读取，不开放公共桶地址。
+- 学校、个人记录、文字/图片会话和通知逐项校验权限。三个演示身份仍由所有访客共用，独立身份通过恢复码和服务端会话访问。
 
-## 源码与更新
+仅数据库没有状态时创建种子。后续迁移增量补充字段和标识示例，不覆盖原求助、私信与感谢。本机 data/ 与云端互相独立，不复制到部署包。
 
-Sites 构建工程位于本机 `sites/campus-kindness`，由 Sites 独立源码仓库管理；主项目忽略该工程的依赖、构建产物及 Git 元数据。当前站点 ID 保存在该工程 `.openai/hosting.json`。
+## 更新流程
 
-修改主项目界面或业务后，先运行 `node scripts/sync-cloud.mjs`，把界面、示例数据定义和共享规则同步到现有托管工程，再构建、验证、通过 Sites 保存版本并部署。同步脚本不复制 `data/`、会话或凭据。
+托管源码工程为本机 sites/campus-kindness，使用 Sites 独立源码仓库。主工程忽略其依赖、产物和 Git 元数据；主工程本机运行无需该目录。
 
-主项目运行不依赖托管工程；`npm test` 在真实 SQLite 上验证云端 SQL、会话、协作流程、访问边界和并发写入重试。
+1. 修改主工程并运行 npm test。
+2. node scripts/sync-cloud.mjs 同步页面、图片、共享业务，不复制本机数据或凭据。
+3. 在托管工程安装/使用现有依赖，按 db/schema.ts 生成新的 Drizzle 迁移；历史迁移不能改写。
+4. 本地 Worker 预览时应用迁移，检查 D1/R2；预览进程退出后再构建，避免 Windows 锁住 dist。
+5. 通过 Sites 工作流构建、保存并推送精确源码、生成对应归档、保存版本，再部署已保存版本。保留当前公开访问设置，不新建站点或清库。
+
+本轮新增迁移 0001 只给 kindness_sessions 添加 owned_ids，0000 保持不变。正式发布由托管部署流程应用迁移。
+
+## 未配置与容量
+
+真实学校邮箱认证按用户决定保留待配置，不生成真实认证标记；当前可用的是分校演示圈。站内消息15秒检查，离线留存，无站外系统推送。
+
+云端单状态快照约1.8MB，写入每IP五分钟最多120次，图片单次最多3MB。属于比赛演示规模；正式运营前需完善存储、备份、审核与账号找回。
+
+## 本轮发布
+
+2026-10-25 发布版本 3：校园岛品牌、独立身份与学校演示圈、图片私信和进度通知。托管源码提交 bcebbb8eb46a268c534743351baad0b29c0bd74f，保留原公开网址。邮件验证仍待配置。
