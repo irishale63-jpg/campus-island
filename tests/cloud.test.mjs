@@ -7,7 +7,7 @@ import { handleApi, withStore } from '../lib/cloud-api.mjs';
 // Real SQLite exercises the same SQL and revision checks as hosted D1.
 function database() {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../deploy/schema.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../lib/schema.sql', import.meta.url), 'utf8'));
   const prepare = sql => {
     let values = [];
     const statement = {

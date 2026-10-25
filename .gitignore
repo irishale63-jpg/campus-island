@@ -9,3 +9,7 @@ test-results/
 
 # Local submission archives and Git history backup
 /提交材料/
+
+# Local planning archive and hosting maintenance utility
+/本机资料/
+/scripts/sync-cloud.mjs

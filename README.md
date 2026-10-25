@@ -21,7 +21,7 @@
 >
 > **版本说明：** 当前为比赛演示版本。七个学校圈均为演示圈，真实学校邮箱认证待配置；选择学校不代表认证通过。预设身份由访客共用，也可以创建独立身份。带「演示案例」标记的内容用于展示流程，不代表真实运营数据。
 
-![校园岛互助角桌面界面](docs/images/desktop.png)
+![校园岛互助角桌面界面](assets/screenshots/desktop.png)
 
 ## 阅读导航
 
@@ -111,11 +111,11 @@
 
 ### 手机界面
 
-<img src="docs/images/mobile.png" width="300" alt="校园岛手机端互助角">
+<img src="assets/screenshots/mobile.png" width="300" alt="校园岛手机端互助角">
 
 ### 感谢卡
 
-![校园岛感谢页面](docs/images/thank-you.png)
+![校园岛感谢页面](assets/screenshots/thank-you.png)
 
 </details>
 
@@ -189,8 +189,6 @@ npm start
 - 停止：在启动窗口按 **Ctrl+C**；双击启动方式也可关闭启动窗口。
 - 重新打开：再次运行 `npm start`，或双击启动脚本。
 - 默认数据会保留，重新启动不会清空求助、消息和感谢。
-
-旧名称的「启动善意同行.cmd」「手机访问善意同行.cmd」保留为兼容入口，新用户使用校园岛版本即可。
 
 ### 开发与测试命令
 
@@ -452,7 +450,7 @@ flowchart TB
 | 身份与范围 | identity.mjs 管理恢复口令哈希、学校白名单、身份资料与兼容升级 |
 | 云端持久化 | Cloudflare D1 保存数据与会话；带 revision 的条件更新和重试减少并发覆盖 |
 | 图片存储 | 本机私有文件目录 / 云端 R2，通过应用接口鉴权读取 |
-| 在线托管 | Cloudflare Workers，由 Sites 构建与发布；详细配置见部署说明 |
+| 在线托管 | Cloudflare Workers；本机启动不依赖云端托管服务 |
 
 ### 目录结构
 
@@ -471,18 +469,18 @@ campus-island/
 │  ├─ identity.mjs         身份、恢复口令与七校范围
 │  ├─ cloud-api.mjs        D1 / R2 云端适配
 │  ├─ seed.mjs             演示数据与案例兼容
-│  └─ local-address.mjs    本机/局域网地址选择
+│  ├─ local-address.mjs    本机/局域网地址选择
+│  └─ schema.sql           云端数据表结构与数据库测试
 ├─ server.mjs              本机服务入口
-├─ scripts/                双击启动与云端同步脚本
+├─ scripts/                双击启动脚本
 ├─ tests/                  流程、权限、存储与并发测试
-├─ docs/                   截图、实施记录与提交说明
-├─ deploy/                 云端表结构与部署说明
+├─ assets/screenshots/     项目演示截图
 ├─ package.json            运行命令及 Node.js 版本要求
 ├─ 启动校园岛.cmd          Windows 本机入口
 └─ 手机访问校园岛.cmd      Windows 局域网入口
 ```
 
-`data/` 为运行后生成的数据目录，不在源码仓库中。早期策划和修改记录保留用于说明项目演进，当前实际功能与运行方式以本 README 为准。
+`data/` 为运行后生成的数据目录，不在源码仓库中。项目介绍、功能、运行方法与演示步骤集中在本 README。
 
 ## 数据保存与权限
 
@@ -559,12 +557,9 @@ npm test
 
 云端当前为比赛规模：状态快照上限约 1.8 MB，每 IP 五分钟最多 120 次写入，超限会返回明确提示；不承诺无限容量。独立域名验证完成前，README 使用上方已可访问的演示地址。
 
-## 项目资料与参考
+## 项目链接与参考
 
 - **源码仓库：** [irishale63-jpg/campus-island](https://github.com/irishale63-jpg/campus-island)
 - **在线体验：** [打开校园岛](https://campus-kindness-cjq.round-bell-5229.chatgpt.site)
-- **云端说明：** [部署与数据迁移](deploy/README.md)。托管工程由独立源码仓库管理，本仓库包含本机可运行源码和共享云端业务模块；本机运行不依赖托管工程。
-- **实施范围：** [本轮实施对照](docs/校园岛_实施对照.md)
-- **提交与演示：** [比赛提交说明](docs/提交说明.md)
 
 设计方法参考 [Emil Kowalski](https://github.com/emilkowalski/skills) 的相关设计指南，侧重信息层级、克制的动效和移动端操作。品牌使用“小岛纸角”图标。项目目前尚未选定开源许可证。
