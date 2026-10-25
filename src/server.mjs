@@ -8,7 +8,7 @@ import { ensureIslandState } from './lib/identity.mjs';
 import { createApplication, securityHeaders, MAX_IMAGE_BYTES } from './lib/application.mjs';
 import { launchAddress } from './lib/local-address.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
-export function createApp({dataFile=resolve(ROOT,'data/store.json'),demo=true}={}) {
+export function createApp({dataFile=resolve(ROOT,'..','data/store.json'),demo=true}={}) {
   mkdirSync(dirname(dataFile),{recursive:true});
   let store=ensureIslandState(existsSync(dataFile)?JSON.parse(readFileSync(dataFile,'utf8')):seedData());
   const save=()=>{const temp=dataFile+'.tmp';writeFileSync(temp,JSON.stringify(store,null,2),'utf8');renameSync(temp,dataFile);};

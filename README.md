@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/brand-island.png" width="96" height="96" alt="校园岛图标">
+  <img src="src/public/brand-island.png" width="96" height="96" alt="校园岛图标">
   <h1>校园岛</h1>
   <p><strong>讲道题，借件东西，找人搭把手。</strong></p>
   <p>面向校园日常需求的轻量互助平台</p>
@@ -21,7 +21,7 @@
 >
 > **版本说明：** 当前为比赛演示版本。七个学校圈均为演示圈，真实学校邮箱认证待配置；选择学校不代表认证通过。预设身份由访客共用，也可以创建独立身份。带「演示案例」标记的内容用于展示流程，不代表真实运营数据。
 
-![校园岛互助角桌面界面](assets/screenshots/desktop.png)
+![校园岛互助角桌面界面](src/assets/screenshots/desktop.png)
 
 ## 阅读导航
 
@@ -111,11 +111,11 @@
 
 ### 手机界面
 
-<img src="assets/screenshots/mobile.png" width="300" alt="校园岛手机端互助角">
+<img src="src/assets/screenshots/mobile.png" width="300" alt="校园岛手机端互助角">
 
 ### 感谢卡
 
-![校园岛感谢页面](assets/screenshots/thank-you.png)
+![校园岛感谢页面](src/assets/screenshots/thank-you.png)
 
 </details>
 
@@ -161,7 +161,7 @@ git clone https://github.com/irishale63-jpg/campus-island.git
 cd campus-island
 ```
 
-**不用 Git：** 打开 [项目仓库](https://github.com/irishale63-jpg/campus-island)，点击 **Code → Download ZIP**，完整解压。进入能看到 `package.json`、`server.mjs` 和 `public/` 的文件夹，不能直接在压缩包里运行。
+**不用 Git：** 打开 [项目仓库](https://github.com/irishale63-jpg/campus-island)，点击 **Code → Download ZIP**，完整解压。进入能看到 `package.json`、`README.md` 和 `src/` 的文件夹，不能直接在压缩包里运行。
 
 #### 第三步：启动网站
 
@@ -182,7 +182,7 @@ npm start
 
 然后在浏览器打开 **<http://127.0.0.1:3000>**。
 
-> 不要直接双击 `public/index.html`。网站需要本机服务提供身份、求助和消息接口；直接打开 HTML 文件不能完整使用。
+> 不要直接双击 `src/public/index.html`。网站需要本机服务提供身份、求助和消息接口；直接打开 HTML 文件不能完整使用。
 
 #### 第四步：停止与重新打开
 
@@ -456,28 +456,17 @@ flowchart TB
 
 ```text
 campus-island/
-├─ public/
-│  ├─ index.html           页面入口与对话框
-│  ├─ styles.css           视觉与响应布局
-│  ├─ app.js               广场、发布、详情、互助与感谢交互
-│  ├─ account.js           身份、主页与学校选择
-│  ├─ messages.js          会话、图片、通知与未读交互
-│  └─ brand-island.png     小岛纸角品牌图标
-├─ lib/
-│  ├─ application.mjs      共享接口、权限及消息处理
-│  ├─ domain.mjs           互助状态规则
-│  ├─ identity.mjs         身份、恢复口令与七校范围
-│  ├─ cloud-api.mjs        D1 / R2 云端适配
-│  ├─ seed.mjs             演示数据与案例兼容
-│  ├─ local-address.mjs    本机/局域网地址选择
-│  └─ schema.sql           云端数据表结构与数据库测试
-├─ server.mjs              本机服务入口
-├─ scripts/                双击启动脚本
-├─ tests/                  流程、权限、存储与并发测试
-├─ assets/screenshots/     项目演示截图
-├─ package.json            运行命令及 Node.js 版本要求
-├─ 启动校园岛.cmd          Windows 本机入口
-└─ 手机访问校园岛.cmd      Windows 局域网入口
+├─ README.md                  项目介绍、运行教程与完整示例
+├─ package.json               启动与测试命令
+├─ 启动校园岛.cmd             Windows 双击启动
+├─ 手机访问校园岛.cmd         同一 Wi-Fi 下手机访问
+└─ src/                       源码、测试与截图集中在这里
+   ├─ server.mjs              本机服务入口
+   ├─ public/                 页面、样式、交互与品牌图标
+   ├─ lib/                    互助规则、身份、权限与存储
+   ├─ scripts/                启动脚本
+   ├─ tests/                  流程、权限与持久化测试
+   └─ assets/screenshots/     README 展示截图
 ```
 
 `data/` 为运行后生成的数据目录，不在源码仓库中。项目介绍、功能、运行方法与演示步骤集中在本 README。
@@ -517,10 +506,10 @@ npm test
 
 | 测试文件 | 数量 | 主要验证内容 |
 | --- | --- | --- |
-| tests/workflow.test.mjs | 6 | 学习闭环、借用归还、并发选人、撤回与取消、截止、请求验证与访问边界 |
-| tests/cloud.test.mjs | 3 | 真实 SQLite 上的云端 SQL、会话、私有视图、并发重试、升级保留数据 |
-| tests/demo.test.mjs | 1 | 示例仅增量补入一次，保留已有需求与对话 |
-| tests/island.test.mjs | 5 | 独立身份恢复、七校隔离、编辑与通知、私信图片权限、已读持久化与归还提醒 |
+| src/tests/workflow.test.mjs | 6 | 学习闭环、借用归还、并发选人、撤回与取消、截止、请求验证与访问边界 |
+| src/tests/cloud.test.mjs | 3 | 真实 SQLite 上的云端 SQL、会话、私有视图、并发重试、升级保留数据 |
+| src/tests/demo.test.mjs | 1 | 示例仅增量补入一次，保留已有需求与对话 |
+| src/tests/island.test.mjs | 5 | 独立身份恢复、七校隔离、编辑与通知、私信图片权限、已读持久化与归还提醒 |
 | **合计** | **15** | 覆盖主要流程、权限与持久化 |
 
 已在 Windows / Node.js 24 环境运行上述测试，并使用 Edge 自动化验证双人完整流程、图片预览、身份恢复、跨标签身份切换、键盘和空状态。检查的页面宽度包括 360、390、640、768、1024、1440 像素；手机视口检查不等同于完整的 iPhone / Android 真机验证。
