@@ -4,7 +4,7 @@
   <p><strong>讲道题，借件东西，找人搭把手。</strong></p>
   <p>面向校园日常需求的轻量互助平台</p>
   <p>
-    <a href="https://campus-kindness-cjq.round-bell-5229.chatgpt.site">在线体验</a> ·
+    <a href="https://xiaoyuandao73.asia">在线体验</a> ·
     <a href="#快速开始">本地运行</a> ·
     <a href="#完整演示示例">完整示例</a> ·
     <a href="#常见问题">常见问题</a>
@@ -17,7 +17,7 @@
 
 当前版本聚焦 **学习交流** 和 **物品借用**：从发布求助、回应、确定帮助者，到文字与图片私信、确认完成、发送感谢，能够完成一次完整的互助。
 
-> **评审快速体验：** 无需安装，直接打开 [在线演示](https://campus-kindness-cjq.round-bell-5229.chatgpt.site)，点击「切换身份」选择体验身份。若要完整验证两人协作，请按照下方 [完整演示示例](#完整演示示例)，分别使用普通窗口和无痕窗口。
+> **评审快速体验：** 无需安装，直接打开 [在线演示](https://xiaoyuandao73.asia)，点击「切换身份」选择体验身份。若要完整验证两人协作，请按照下方 [完整演示示例](#完整演示示例)，分别使用普通窗口和无痕窗口。
 >
 > **版本说明：** 当前为比赛演示版本。七个学校圈均为演示圈，真实学校邮箱认证待配置；选择学校不代表认证通过。预设身份由访客共用，也可以创建独立身份。带「演示案例」标记的内容用于展示流程，不代表真实运营数据。
 
@@ -123,7 +123,7 @@
 
 ### 方式一：直接在线体验
 
-打开 **[校园岛在线演示](https://campus-kindness-cjq.round-bell-5229.chatgpt.site)**。电脑和手机均可访问，无需安装开发工具，也不需要项目电脑保持开机。
+打开 **[校园岛在线演示](https://xiaoyuandao73.asia)**。电脑和手机均可访问，无需安装开发工具，也不需要项目电脑保持开机。
 
 - 浏览需求：直接进入互助广场。
 - 快速操作：点击「切换身份」，选择林同学、周同学或许同学。
@@ -549,6 +549,6 @@ npm test
 ## 项目链接与参考
 
 - **源码仓库：** [irishale63-jpg/campus-island](https://github.com/irishale63-jpg/campus-island)
-- **在线体验：** [打开校园岛](https://campus-kindness-cjq.round-bell-5229.chatgpt.site)
+- **在线体验：** [打开校园岛](https://xiaoyuandao73.asia)
 
 设计方法参考 [Emil Kowalski](https://github.com/emilkowalski/skills) 的相关设计指南，侧重信息层级、克制的动效和移动端操作。品牌使用“小岛纸角”图标。项目目前尚未选定开源许可证。
