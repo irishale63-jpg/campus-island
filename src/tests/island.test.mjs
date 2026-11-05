@@ -47,10 +47,10 @@ test('independent identities, recovery, saved identity switching and profile own
   assert.ok(!JSON.stringify(await restored.request('/me')).includes('recoveryHash'));
 });
 
-test('seven schools only, search aliases and server-enforced circle boundaries',async t=>{
+test('national undergraduate schools, search aliases and server-enforced circle boundaries',async t=>{
   const f=await fixture(t),a=f.client(),b=f.client(),c=f.client();
   const aa=await a.create('武大同学','whu'),bb=await b.create('华科同学','hust');await c.create('另一位武大同学','whu');
-  assert.equal((await a.request('/schools')).schools.length,7);
+  assert.equal((await a.request('/schools')).schools.length,1412);
   assert.equal((await a.request('/schools?q=WHU')).schools[0].name,'武汉大学');
   assert.equal((await a.request('/schools?q=其他学校')).schools.length,0);
   const task=await a.publish('study',{schoolId:'hust',circleMode:'verified'});
@@ -107,6 +107,27 @@ test('private text, image messages, unread receipts and read-only history follow
   await helper.act(task.id,'submit');await owner.act(task.id,'complete');
   await helper.request('/conversations/'+task.id+'/messages',{text:'结束后不能再发'},409);
   assert.equal((await owner.raw('/images/'+imageId)).status,200);
+});
+
+test('profile photos persist across restart and recovery, respect school scope and can return to presets',async t=>{
+  const f=await fixture(t),owner=f.client(),peer=f.client(),foreign=f.client(),guest=f.client(),demo=f.client();
+  const identity=await owner.create('头像同学');await peer.create('同校同学');await foreign.create('外校同学','hust');await demo.request('/login',{userId:'lin'});
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jGKsAAAAASUVORK5CYII=','base64');
+  const form=(image=png,extra={})=>{const body=new FormData();for(const [key,value] of Object.entries({name:'头像同学',avatar:'photo',bio:'头像与资料一起保存',skills:'数学',offers:'讲题',...extra}))body.set(key,value);body.set('image',new Blob([image],{type:'image/png'}),'avatar.png');return body;};
+  assert.equal((await guest.raw('/me/profile',{body:form()})).status,401);
+  assert.equal((await demo.raw('/me/profile',{body:form()})).status,403);
+  assert.equal((await owner.raw('/me/profile',{body:form(Buffer.from('<svg>bad</svg>'))})).status,400);
+  assert.equal((await owner.raw('/me/profile',{body:form(png,{schoolId:'hust'})})).status,400);
+  assert.equal((await owner.request('/me')).user.avatarUrl,null);
+  const response=await owner.raw('/me/profile',{body:form()});assert.equal(response.status,200);
+  const user=(await response.json()).user;assert.equal(user.avatar,'photo');assert.match(user.avatarUrl,/^\/api\/avatars\/[a-f0-9-]{36}$/);
+  assert.equal(user.bio,'头像与资料一起保存');assert.equal(JSON.stringify(user).includes('private/'),false);
+  const path=user.avatarUrl.slice(4),image=await peer.raw(path);assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/png');assert.deepEqual(Buffer.from(await image.arrayBuffer()),png);
+  assert.equal((await foreign.raw(path)).status,404);assert.equal((await guest.raw(path)).status,404);
+  await f.restart();assert.equal((await owner.request('/me')).user.avatarUrl,user.avatarUrl);assert.equal((await owner.raw(path)).status,200);
+  const restored=f.client();await restored.request('/identities/restore',{recoveryKey:identity.recoveryKey});assert.equal((await restored.request('/me')).user.avatarUrl,user.avatarUrl);
+  await restored.request('/me/profile',{name:'改了昵称',avatar:'photo',bio:'照片继续保留'});assert.equal((await owner.raw(path)).status,200);
+  await owner.request('/me/profile',{name:'头像同学',avatar:'star',bio:''});assert.equal((await owner.request('/me')).user.avatarUrl,null);assert.equal((await owner.raw(path)).status,404);
 });
 
 test('borrower return notification asks for lender confirmation, notifications and read state persist',async t=>{

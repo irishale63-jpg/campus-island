@@ -23,12 +23,13 @@ function database() {
     catch (error) { sqlite.exec('ROLLBACK'); throw error; }
   }, close() { sqlite.close(); } };
 }
-function client(db) {
+function client(db,extraEnv={}) {
   let cookie = '';
   return async (path, body, expected = 200) => {
     const headers = { cookie };
-    if (body !== undefined) Object.assign(headers, { 'Content-Type': 'application/json', 'X-Requested-With': 'CampusKindness', Origin: 'https://example.test' });
-    const response = await handleApi(new Request('https://example.test/api' + path, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) }), {DB: db});
+    const multipart=body instanceof FormData;
+    if (body !== undefined) Object.assign(headers, { ...(!multipart?{'Content-Type': 'application/json'}:{}), 'X-Requested-With': 'CampusKindness', Origin: 'https://example.test' });
+    const response = await handleApi(new Request('https://example.test/api' + path, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : multipart?body:JSON.stringify(body) }), {DB: db,...extraEnv});
     if (response.headers.has('set-cookie')) {
       assert.match(response.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
       assert.match(response.headers.get('set-cookie'), /Secure/);
@@ -39,6 +40,39 @@ function client(db) {
   };
 }
 const taskBody = () => ({title:'云端测试学习需求',description:'一起交流一道高数题的思路，仅为测试。',category:'study',mode:'online',deadline:new Date(Date.now()+86400000).toISOString()});
+
+test('cloud avatar metadata and object storage survive recovery and remove replaced photos',async()=>{
+  const db=database(),objects=new Map(),env={BUCKET:{async put(key,bytes){objects.set(key,bytes);},async get(key){return objects.has(key)?{body:objects.get(key)}:null;},async delete(key){objects.delete(key);}}};
+  try{
+    const owner=client(db,env),created=await owner('/identities',{name:'云端头像',avatar:'leaf'},201);
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jGKsAAAAASUVORK5CYII=','base64');
+    const form=new FormData();form.set('name','云端头像');form.set('avatar','photo');form.set('image',new Blob([png],{type:'image/png'}),'avatar.png');
+    const {user}=await owner('/me/profile',form);assert.equal(objects.size,1);assert.ok(user.avatarUrl);
+    const restored=client(db,env);await restored('/identities/restore',{recoveryKey:created.recoveryKey});assert.equal((await restored('/me')).user.avatarUrl,user.avatarUrl);
+    await restored('/me/profile',{name:'云端头像',avatar:'moon'});assert.equal(objects.size,0);assert.equal((await restored('/me')).user.avatarUrl,null);
+  }finally{db.close();}
+});
+
+test('cloud management: server-configured key, durable admin sessions and sample import',async()=>{
+  const db=database();
+  try {
+    const key='cloud-management-test-key-32-characters';
+    const adminEnv={ADMIN_KEY:key};
+    const unconfigured=client(db),admin=client(db,adminEnv),visitor=client(db);
+    await unconfigured('/admin/login',{key},503);
+    await visitor('/admin/overview',undefined,401);
+    await admin('/admin/login',{key});
+    assert.deepEqual(await admin('/admin/samples',{}),{usersAdded:28,tasksAdded:28});
+    assert.equal((await admin('/admin/overview')).summary.demoUsers,31);
+    const newSession=client(db,{ADMIN_KEY:key});await newSession('/admin/login',{key});
+    assert.equal((await newSession('/admin/overview')).tasks.filter(t=>t.isSample).length,28);
+    await visitor('/admin/samples',{},401);
+    adminEnv.ADMIN_KEY='';await admin('/admin/overview',undefined,401);
+    adminEnv.ADMIN_KEY='rotated-management-key-32-characters';await admin('/admin/overview',undefined,401);
+    await admin('/admin/login',{key},401);
+    await admin('/admin/login',{key:adminEnv.ADMIN_KEY});await admin('/admin/overview');
+  } finally {db.close();}
+});
 
 test('cloud: shared durable data, private participant views, secure sessions and completed thanks', async () => {
   const db = database();

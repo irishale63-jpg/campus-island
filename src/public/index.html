@@ -3,15 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#f5f5f7">
+  <meta name="theme-color" content="#faf9f6">
   <meta name="description" content="校园岛，把校园里的求助放在一起。学习交流、借点东西，找到能帮忙的人。">
-  <title>校园岛 · 互助角</title>
+  <title>校园岛 · 互助，就在身边</title>
   <link rel="icon" href="/brand-island.png" type="image/png">
   <link rel="apple-touch-icon" href="/brand-island.png">
+  <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/brand.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/account.js" defer></script>
   <script src="/messages.js" defer></script>
+  <script src="/email-login.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -23,28 +28,30 @@
   <div class="workspace">
     <header class="topbar"><div class="school-context" id="school-context"></div><div class="top-actions"><span class="demo-label">演示版</span><button class="button primary small" id="publish-top" type="button">＋ 发个求助</button></div></header>
     <main id="main" tabindex="-1"><div class="loading">正在打开校园里的小善意…</div></main>
-    <footer class="page-footer"><span>校园岛</span><button class="text-button" data-about type="button">关于</button></footer>
+    <footer class="page-footer" hidden><div class="footer-brand"><img src="/brand-island.png" width="27" height="27" alt=""><strong>校园岛</strong><small class="footer-copyright">© 2026</small></div><div class="footer-links"><button class="text-button" data-about type="button">关于小岛</button><a class="text-button" href="/admin">平台管理</a></div><div class="theme-switch" role="group" aria-label="外观"><button type="button" data-set-theme="light" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>浅色</button><button type="button" data-set-theme="dark" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.4A9 9 0 0 1 9.6 3.5a9 9 0 1 0 10.9 10.9Z"/></svg>深色</button></div></footer>
   </div>
   <nav class="mobile-nav" id="mobile-nav" aria-label="手机导航"></nav>
 
   <dialog id="publish-dialog" class="dialog" aria-labelledby="publish-title">
     <div class="dialog-head"><h2 id="publish-title">发个求助</h2><button class="icon-button" data-close="publish-dialog" aria-label="关闭发布窗口">×</button></div>
     <form id="publish-form" novalidate>
-      <fieldset class="category-choice"><legend>分类</legend><label><input type="radio" name="category" value="study" checked>学习交流</label><label><input type="radio" name="category" value="borrow">借点东西</label></fieldset>
-      <label class="field">需要什么帮助？<input name="title" required minlength="2" maxlength="40" placeholder="想请人讲一道 C++ 题"></label>
-      <label class="field">补充说明（选填）<textarea name="description" maxlength="1000" rows="3" placeholder="卡在哪里？什么时候方便？"></textarea></label>
-      <label class="field">所需时间（选填）<input name="helpTime" maxlength="80" placeholder="如今天 18:00，约 10 分钟"></label>
-      <div class="form-grid"><label class="field">协作方式<select name="mode"><option value="online">线上</option><option value="offline">见面</option></select></label><label class="field" id="location-field" hidden>见面地点<input name="location" maxlength="50" placeholder="如图书馆一楼" aria-describedby="location-hint"><small class="field-hint" id="location-hint">请选择校园公共区域。</small></label></div>
-      <div class="field"><span>回应截止时间</span><div class="time-shortcuts" role="group" aria-label="回应截止快捷选项"><button type="button" data-deadline="2">2 小时后</button><button type="button" data-deadline="tonight">今晚</button><button type="button" data-deadline="tomorrow">明天</button><button type="button" data-deadline="custom">自定义</button></div><input type="datetime-local" name="deadline" required aria-label="回应截止时间"><small class="field-hint">此后不再接受新的回应。</small></div>
-      <label class="field" id="return-field" hidden>归还时间<input type="datetime-local" name="returnAt"></label>
-      <p class="form-note">演示版，请勿填写真实联系方式。</p><p class="form-error" id="publish-error" role="alert"></p>
+      <fieldset class="category-choice"><legend>分类</legend><label><input type="radio" name="category" value="activity">其他</label><label><input type="radio" name="category" value="study" checked>学习交流</label><label><input type="radio" name="category" value="borrow">物品借用</label><label><input type="radio" name="category" value="sports">运动搭子</label><label><input type="radio" name="category" value="life">生活互助</label></fieldset>
+      <div class="publish-sheet">
+        <label class="field publish-title-field"><span>标题</span><input name="title" required minlength="2" maxlength="40" placeholder="想请人讲一道 C++ 题"></label>
+        <label class="field publish-description"><span>说明 <small>选填</small></span><textarea name="description" maxlength="1000" rows="2" placeholder="卡在哪里？什么时候方便？"></textarea></label>
+        <label class="field publish-row"><span>时间</span><input name="helpTime" maxlength="80" placeholder="选填，如今晚 18:00，约 10 分钟"></label>
+        <label class="field publish-row"><span>方式</span><select name="mode"><option value="online">线上协作</option><option value="offline">线下见面</option></select></label>
+        <label class="field publish-row" id="location-field" hidden><span>地点</span><input name="location" maxlength="50" placeholder="校园公共区域，如图书馆一楼"></label>
+        <div class="field publish-row publish-deadline"><label for="publish-deadline">截止</label><div class="publish-deadline-control"><input id="publish-deadline" type="datetime-local" name="deadline" required aria-label="回应截止时间"><div class="time-shortcuts" role="group" aria-label="回应截止快捷选项"><button type="button" data-deadline="2">2 小时后</button><button type="button" data-deadline="tonight">今晚</button><button type="button" data-deadline="tomorrow">明天</button><button type="button" data-deadline="custom">自定义</button></div></div></div>
+        <label class="field publish-row" id="return-field" hidden><span>归还</span><input type="datetime-local" name="returnAt"></label>
+      </div>
+      <p class="form-error" id="publish-error" role="alert"></p>
       <div class="dialog-footer"><button type="button" class="button quiet" data-close="publish-dialog">取消</button><button class="button primary" type="submit">发布</button></div>
     </form>
   </dialog>
   <dialog id="detail-dialog" class="dialog detail-dialog" aria-labelledby="detail-title"><div id="detail-content"></div></dialog>
   <dialog id="identity-dialog" class="dialog account-dialog" aria-labelledby="identity-title">
-    <div class="dialog-head"><h2 id="identity-title">切换身份</h2><button class="icon-button" data-close="identity-dialog" aria-label="关闭身份窗口">×</button></div>
-    <div class="identity-tabs" role="tablist" aria-label="身份操作"><button role="tab" data-identity-tab="choose" aria-selected="true">选择身份</button><button role="tab" data-identity-tab="create" aria-selected="false">创建身份</button><button role="tab" data-identity-tab="restore" aria-selected="false">恢复身份</button></div>
+    <div class="dialog-head"><div class="identity-brand"><span class="brand-mark"><img src="/brand-island.png" width="42" height="42" alt=""></span><div><h2 id="identity-title">登录校园岛</h2></div></div><button class="icon-button" data-close="identity-dialog" aria-label="关闭身份窗口">×</button></div>
     <div id="identity-content"></div>
   </dialog>
   <dialog id="profile-dialog" class="dialog" aria-labelledby="public-profile-title"><div id="public-profile-content"></div></dialog>

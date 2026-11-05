@@ -1,6 +1,12 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, createHash, timingSafeEqual } from 'node:crypto';
+import { schoolCounts, managementData, addSchoolSamples } from './management.mjs';
+import { schoolDirectory, matchesSchool } from './schools.mjs';
+import { createSchoolVerification,saveSchoolEmailDomains } from './verification.mjs';
+import { createEmailAuth } from './email-auth.mjs';
+import { taskCategories,categoryLabel } from './categories.mjs';
+import { importExperienceBatch } from './experience.mjs';
 import { clean, must, fail } from './domain.mjs';
-import { schools, avatars, publicUser, findUser, scopeFor, sameScope, createIdentity, recoveryMatches } from './identity.mjs';
+import { schools, avatars, publicUser, findUser, scopeFor, sameScope, createIdentity, recoveryMatches, usernameKey, usernameAvailable } from './identity.mjs';
 
 export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 export const securityHeaders = {
@@ -59,7 +65,7 @@ function taskInput(body) {
   const title=typeof body.title==='string'?body.title.trim():'';
   must(title.length>=2 && title.length<=40,'请写明需要的帮助。');
   const description=optional(body.description,'补充说明',1000);
-  must(['study','borrow'].includes(body.category),'请选择分类');
+  must(taskCategories.some(c=>c.id===body.category),'请选择分类');
   must(['online','offline'].includes(body.mode),'请选择协作方式');
   const end=Date.parse(body.deadline),back=Date.parse(body.returnAt);
   must(Number.isFinite(end)&&end>Date.now(),'请选择之后的时间。');
@@ -67,7 +73,7 @@ function taskInput(body) {
   return {title,description,category:body.category,mode:body.mode,
     location:body.mode==='online'?'线上':clean(body.location,'见面地点',2,50),helpTime:optional(body.helpTime,'所需时间',80),
     deadline:new Date(end).toISOString(),returnAt:body.category==='borrow'?new Date(back).toISOString():null,
-    tags:[body.category==='borrow'?'借点东西':'学习交流']};
+    tags:[categoryLabel(body.category)]};
 }
 async function readBytes(request,max) {
   must(!request.headers.get('content-length')||Number(request.headers.get('content-length'))<=max,'提交内容过大',413);
@@ -83,12 +89,13 @@ function imageType(bytes) {
 }
 
 // Local and hosted adapters share every authorization and state transition.
-export function createApplication({transact,sessions,uploads,rateLimit=async()=>{},demo=true}) {
+export function createApplication({transact,sessions,uploads,rateLimit=async()=>{},demo=true,adminKey='',verification=createSchoolVerification(),emailAuth=createEmailAuth()}) {
   return async function handle(request) {
     try {
       const url=new URL(request.url),path=url.pathname,method=request.method;
       let body={};
-      const imageUpload=method==='POST'&&/^\/api\/conversations\/[^/]+\/images$/.test(path);
+      const profileUpload=method==='POST'&&path==='/api/me/profile'&&request.headers.get('content-type')?.startsWith('multipart/form-data');
+      const imageUpload=method==='POST'&&(/^\/api\/conversations\/[^/]+\/images$/.test(path)||profileUpload);
       if(method==='POST') {
         must(!request.headers.get('origin')||request.headers.get('origin')===url.origin,'请求来源不正确',403);
         must(request.headers.get('x-requested-with')==='CampusKindness','请通过应用页面提交',403);
@@ -100,6 +107,32 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
           must(body&&typeof body==='object'&&!Array.isArray(body),'提交格式不正确');
         }
       } else must(method==='GET','不支持的请求',405);
+      if(path.startsWith('/api/admin/')) {
+        const adminToken=(request.headers.get('cookie')||'').match(/(?:^|;\s*)kindness_admin=([a-f0-9]{64})(?:;|$)/)?.[1];
+        const adminSession=adminToken?await sessions.get(adminToken):null;
+        const adminFingerprint=createHash('sha256').update(adminKey).digest('hex');
+        const authorized=adminKey.length>=24&&adminSession?.user_id==='__island_admin__'&&adminSession.until>Date.now()&&adminSession.owned_ids===JSON.stringify([adminFingerprint]);
+        const cookie=(value,age)=>`kindness_admin=${value}; HttpOnly; SameSite=Strict; Path=/api/admin; Max-Age=${age}${url.protocol==='https:'?'; Secure':''}`;
+        if(path==='/api/admin/login'&&method==='POST') {
+          must(adminKey.length>=24,'管理入口尚未配置，请联系维护者。',503);
+          const digest=value=>createHash('sha256').update(value).digest();
+          must(typeof body.key==='string'&&body.key.length<=200&&timingSafeEqual(digest(body.key),digest(adminKey)),'管理口令不正确',401);
+          if(adminToken)await sessions.delete(adminToken);
+          const key=randomBytes(32).toString('hex');
+          await sessions.set(key,{user_id:'__island_admin__',owned_ids:JSON.stringify([adminFingerprint]),until:Date.now()+8*3600000});
+          return json({ok:true},200,{'Set-Cookie':cookie(key,8*3600)});
+        }
+        must(authorized,'请先登录管理后台',401);
+        if(path==='/api/admin/overview'&&method==='GET')return json(await transact(managementData));
+        if(path==='/api/admin/verification'&&method==='GET')return json(await transact(store=>verification.configuration(store)));
+        if(path==='/api/admin/verification'&&method==='POST')return json(await transact(store=>saveSchoolEmailDomains(store,body)));
+        if(path==='/api/admin/samples'&&method==='POST')return json(await transact(addSchoolSamples));
+        if(path==='/api/admin/experiences'&&method==='POST')return json(await transact(importExperienceBatch));
+        if(path==='/api/admin/logout'&&method==='POST') {
+          await sessions.delete(adminToken);return json({ok:true},200,{'Set-Cookie':cookie('',0)});
+        }
+        fail('管理接口不存在',404);
+      }
       const token=(request.headers.get('cookie')||'').match(/(?:^|;\s*)kindness_session=([a-f0-9]{64})(?:;|$)/)?.[1];
       let session=token?await sessions.get(token):null;
       if(session&&session.until<=Date.now())session=null;
@@ -109,30 +142,42 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
       const user=await transact(store=>findUser(store,session?.user_id)||null);
       const scope=scopeFor(user);
       const auth=()=>must(user,'请先选择或创建身份',401);
-      const activate=async (target,addOwned=false)=>{
-        const key=token&&session?token:randomBytes(32).toString('hex');
+      const activate=async (target,addOwned=false,rotate=false)=>{
+        const key=!rotate&&token&&session?token:randomBytes(32).toString('hex');
         const ids=[...new Set([...owned,...(addOwned?[target.id]:[])])];
         const maxAge=ids.length?30*86400:86400;
         await sessions.set(key,{user_id:target.id,owned_ids:JSON.stringify(ids),until:Date.now()+maxAge*1000});
+        if(rotate&&token)await sessions.delete(token);
         return {'Set-Cookie':`kindness_session=${key}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${url.protocol==='https:'?'; Secure':''}`};
       };
       if(path==='/api/me'&&method==='GET')return json(await transact(store=>({user:publicUser(user),identities:owned.map(id=>publicUser(findUser(store,id))).filter(Boolean),demo,
-        circle:scope,schoolVerification:{available:false,status:'pending_configuration'}})));
+        circle:scope,schoolVerification:verification.status(store,user),emailLogin:emailAuth.status(user)})));
+      const emailClientToken=(request.headers.get('cookie')||'').match(/(?:^|;\s*)kindness_email=([a-f0-9]{64})(?:;|$)/)?.[1];
+      if(path==='/api/auth/email/status'&&method==='GET')return json(emailAuth.status(user));
+      if(path==='/api/auth/email/request'&&method==='POST'){
+        const clientToken=randomBytes(32).toString('hex');
+        const result=await emailAuth.request(transact,user,body,{clientToken,ip:request.headers.get('CF-Connecting-IP')||'local'});
+        return json(result,200,{'Set-Cookie':`kindness_email=${clientToken}; HttpOnly; SameSite=Strict; Path=/api/auth/email; Max-Age=600${url.protocol==='https:'?'; Secure':''}`});
+      }
+      if(path==='/api/auth/email/confirm'&&method==='POST'){
+        const result=await emailAuth.confirm(transact,user,body,{clientToken:emailClientToken,owned});
+        return json({user:publicUser(result.user),created:result.created,purpose:result.purpose},200,await activate(result.user,true,true));
+      }
       if(path==='/api/schools'&&method==='GET') {
         const q=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,100);
-        return json({schools:schools.filter(s=>(s.name+' '+s.aliases).toLowerCase().includes(q))});
+        return json(await transact(store=>({schools:schoolCounts(store).filter(s=>matchesSchool(s,q)),directory:schoolDirectory})));
       }
-      if(path==='/api/demo-accounts'&&method==='GET')return json(await transact(store=>({accounts:demo?store.users.filter(u=>u.isDemo).map(publicUser):[]})));
+      if(path==='/api/demo-accounts'&&method==='GET')return json(await transact(store=>({accounts:demo?store.users.filter(u=>u.isDemo&&!u.isSample&&!u.isExperience).map(publicUser):[],experienceAccounts:demo?store.users.filter(u=>u.isDemo&&u.isExperience&&!u.isSample).map(publicUser):[]})));
       if(path==='/api/login'&&method==='POST') {
         const target=await transact(store=>findUser(store,body.userId));
-        must(target&&(target.isDemo?demo:owned.includes(target.id)),'不能切换到这个身份',403);
+        must(target&&!target.isSample&&(target.isDemo?demo:owned.includes(target.id)),'不能切换到这个身份',403);
         return json({user:publicUser(target)},200,await activate(target));
       }
       if(path==='/api/identities'&&method==='POST') {
         must(owned.length<8,'此设备已保存多个身份，请先使用已有身份。',409);
         const name=clean(body.name,'昵称',1,20),avatar=body.avatar||'island';must(avatars.includes(avatar),'请选择头像');
         const created=createIdentity(name,avatar);
-        await transact(store=>{must(store.users.length<1000,'身份数量已达到当前服务上限。',409);store.users.push(created.user);});
+        await transact(store=>{must(store.users.length<1000,'身份数量已达到当前服务上限。',409);must(usernameAvailable(store,name),'这个用户名已被使用，请换一个。',409);store.users.push(created.user);});
         return json({user:publicUser(created.user),recoveryKey:created.recoveryKey},201,await activate(created.user,true));
       }
       if(path==='/api/identities/restore'&&method==='POST') {
@@ -147,10 +192,48 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
       }
       if(path==='/api/me/profile'&&method==='POST') {
         auth();must(!user.isDemo,'演示身份资料只读，请创建自己的身份。',403);
+        let photo=null;
+        if(profileUpload) {
+          must(uploads,'图片存储暂时不可用，请稍后再试。',503);
+          const bytes=await readBytes(request,MAX_IMAGE_BYTES+65536);
+          let form;try{form=await new Request(request.url,{method:'POST',headers:{'Content-Type':request.headers.get('content-type')},body:bytes}).formData();}catch{fail('无法读取图片，请重新选择。');}
+          must(form.getAll('image').length===1,'请选择一张头像图片');
+          const file=form.get('image');must(file&&typeof file.arrayBuffer==='function','请选择头像图片');
+          must(file.size>0&&file.size<=MAX_IMAGE_BYTES,'处理后的头像不能超过 3 MB。',413);
+          const image=new Uint8Array(await file.arrayBuffer()),type=imageType(image),id=randomUUID();
+          photo={id,key:'private/'+id,type,size:image.length,at:iso(),image};
+          form.delete('image');body=Object.fromEntries(form);
+        }
         must(Object.keys(body).every(k=>['name','avatar','bio','skills','offers'].includes(k)),'学校归属不能通过编辑资料更改。');
-        const name=clean(body.name,'昵称',1,20);must(avatars.includes(body.avatar),'请选择头像');
-        return json(await transact(store=>{const target=findUser(store,user.id);Object.assign(target,{name,initial:name.slice(0,1),avatar:body.avatar,
-          bio:optional(body.bio,'简介',140),skills:optional(body.skills,'擅长什么',120),offers:optional(body.offers,'愿意提供的帮助',120)});return {user:publicUser(target)};}));
+        const name=clean(body.name,'昵称',1,20);
+        must(avatars.includes(body.avatar)||(body.avatar==='photo'&&(photo||user.avatarPhoto)),'请选择头像');
+        must(!photo||body.avatar==='photo','请选择已上传的头像');
+        const profile={name,initial:name.slice(0,1),avatar:body.avatar,bio:optional(body.bio,'简介',140),skills:optional(body.skills,'擅长什么',120),offers:optional(body.offers,'愿意提供的帮助',120)};
+        if(photo)await uploads.put(photo.key,photo.image,photo.type);
+        let result;
+        try {
+          result=await transact(store=>{
+            const target=findUser(store,user.id),previousKey=target.avatarPhoto?.key;
+            must(usernameKey(target.name)===usernameKey(name)||usernameAvailable(store,name,user.id),'这个用户名已被使用，请换一个。',409);
+            must(body.avatar!=='photo'||photo||target.avatarPhoto,'原头像已更新，请刷新后重试。',409);
+            Object.assign(target,profile);
+            if(photo){const {image,...record}=photo;target.avatarPhoto=record;}
+            else if(body.avatar!=='photo')delete target.avatarPhoto;
+            return {user:publicUser(target),removedKey:previousKey!==target.avatarPhoto?.key?previousKey:null};
+          });
+        }catch(error){if(photo)await uploads.delete(photo.key).catch(()=>{});throw error;}
+        if(result.removedKey&&uploads)await uploads.delete(result.removedKey).catch(()=>{});
+        return json({user:result.user});
+      }
+      if(path==='/api/me/circle/leave'&&method==='POST') {
+        auth();must(!user.isDemo&&!user.isExperience&&!user.isSample,'共用模拟账号不能更改学校，请使用自己的账号。',403);
+        return json(await transact(store=>{
+          const target=findUser(store,user.id);
+          Object.assign(target,{schoolId:null,schoolStatus:'unverified',circleMode:null});
+          for(const key of ['schoolVerifiedAt','verifiedEmailHash','schoolEmailMasked'])delete target[key];
+          if(store.emailChallenges)delete store.emailChallenges[user.id];
+          return {user:publicUser(target)};
+        }));
       }
       if(path==='/api/me/circle'&&method==='POST') {
         auth();must(!user.isDemo,'演示身份已有学校圈，请创建自己的身份。',403);
@@ -159,8 +242,21 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
         return json(await transact(store=>{const target=findUser(store,user.id);must(!target.schoolId||target.schoolId===body.schoolId,'学校变更流程暂未开放。',409);
           Object.assign(target,{schoolId:body.schoolId,schoolStatus:'demo',circleMode:'demo'});return {user:publicUser(target)};}));
       }
-      if(path.startsWith('/api/verification/')&&method==='POST') {auth();fail('学校邮箱认证待配置。',503);}
-      let match=path.match(/^\/api\/profiles\/([^/]+)$/);
+      if(path==='/api/verification/status'&&method==='GET'){auth();return json(await transact(store=>verification.status(store,findUser(store,user.id))));}
+      if(path==='/api/verification/request'&&method==='POST')return json(await verification.request(transact,user,body));
+      if(path==='/api/verification/confirm'&&method==='POST')return json(await verification.confirm(transact,user,body));
+      let match=path.match(/^\/api\/avatars\/([a-f0-9-]{36})$/);
+      if(match&&method==='GET') {
+        const photo=await transact(store=>{const target=store.users.find(u=>u.avatar==='photo'&&u.avatarPhoto?.id===match[1]);
+          must(target&&(target.id===user?.id||sameScope(target,scope)),'头像不存在',404);return target.avatarPhoto;});
+        must(uploads,'图片暂时不可用',503);const object=await uploads.get(photo.key);must(object,'头像暂时不可用',404);
+        return new Response(object.body||object,{headers:{...securityHeaders,'Content-Type':photo.type,'Cache-Control':'private, no-store','Content-Disposition':'inline'}});
+      }
+      if(path==='/api/profiles/search'&&method==='GET'){
+        const query=usernameKey(url.searchParams.get('q')).slice(0,100);
+        return json(await transact(store=>({users:query?store.users.filter(u=>(u.id===user?.id||sameScope(u,scope))&&usernameKey(u.name).includes(query)).sort((a,b)=>Number(usernameKey(b.name)===query)-Number(usernameKey(a.name)===query)||a.name.localeCompare(b.name,'zh-CN')).slice(0,6).map(publicUser):[]})));
+      }
+      match=path.match(/^\/api\/profiles\/([^/]+)$/);
       if(match&&method==='GET')return json(await transact(store=>{const target=findUser(store,match[1]);must(target&&(target.id===user?.id||sameScope(target,scope)),'没有找到这个主页',404);return {user:publicUser(target)};}));
       if(path==='/api/tasks'&&method==='GET')return json(await transact((store,domain)=>({tasks:store.tasks.filter(t=>sameScope(t,scope)).map(t=>domain.view(t,user?.id))})));
       if(path==='/api/thanks'&&method==='GET') {
@@ -169,7 +265,7 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
       if(path==='/api/tasks'&&method==='POST') {
         requireMember(user);const input=taskInput(body);
         const task={...input,id:randomUUID(),ownerId:user.id,schoolId:scope.schoolId,circleMode:scope.circleMode,
-          createdAt:iso(),status:'open',helperId:null,responses:[],messages:[],events:[{at:iso(),userId:user.id,text:'发布了求助'}],
+          createdAt:iso(),isDemo:!!user.isDemo,isExperience:!!user.isExperience,status:'open',helperId:null,responses:[],messages:[],events:[{at:iso(),userId:user.id,text:'发布了求助'}],
           loan:{deliveredAt:null,returnedAt:null,confirmedAt:null},thanks:null,cancelRequestedBy:null};
         return json(await transact((store,domain)=>{must(store.tasks.length<500,'求助数量已达到当前服务上限。',409);store.tasks.unshift(task);return {task:domain.view(task,user.id,true)};}),201);
       }
@@ -179,6 +275,7 @@ export function createApplication({transact,sessions,uploads,rateLimit=async()=>
         if(method==='POST')requireMember(user);
         return json(await transact((store,domain)=>{
           const task=visibleTask(store,user,match[1]);
+          if(method==='POST')must(!task.isSample,'这是只读模拟样本。请发布真实求助，或使用预设演示身份体验协作。',409);
           if(method==='POST'&&match[3]==='edit') {
             must(task.ownerId===user.id,'只能编辑自己的求助',403);
             must(task.status==='open'&&!task.responses.some(r=>r.state==='pending'),'已有回应或已结束的求助暂不能编辑。',409);

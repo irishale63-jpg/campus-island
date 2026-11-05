@@ -3,6 +3,8 @@ import { createDomain, must } from './domain.mjs';
 import { seedData } from './seed.mjs';
 import { ensureIslandState } from './identity.mjs';
 import { createHash } from 'node:crypto';
+import { createSchoolVerification,emailDeliveryFromEnv } from './verification.mjs';
+import { createEmailAuth } from './email-auth.mjs';
 export { securityHeaders } from './application.mjs';
 
 export async function withStore(db, operation) {
@@ -23,6 +25,9 @@ export async function handleApi(request,env) {
   if(!env.DB)return new Response(JSON.stringify({error:'没加载出来，请重试。'}),{status:503,headers:{'Content-Type':'application/json; charset=utf-8'}});
   const db=env.DB;
   const app=createApplication({
+    emailAuth:createEmailAuth({secret:env.VERIFICATION_SECRET||env.ADMIN_KEY||'',delivery:emailDeliveryFromEnv(env)}),
+    verification:createSchoolVerification({secret:env.VERIFICATION_SECRET||env.ADMIN_KEY||'',delivery:emailDeliveryFromEnv(env)}),
+    adminKey:env.ADMIN_KEY || '',
     transact:operation=>withStore(db,operation),
     sessions:{
       get:token=>db.prepare('SELECT user_id, owned_ids, until FROM kindness_sessions WHERE token = ?').bind(token).first(),

@@ -4,14 +4,16 @@ import { createApp } from '../server.mjs';
 import { launchAddress } from '../lib/local-address.mjs';
 
 const { port, host, url, lan } = launchAddress();
+const openUrl = process.env.OPEN_ADMIN === '1' ? url + '/admin' : url;
 const app = createApp({ dataFile: process.env.DATA_FILE ? resolve(process.env.DATA_FILE) : undefined, demo: process.env.DEMO_MODE !== 'false' });
 app.listen(port, host, () => {
-  console.log(`\n校园岛已启动：${url}\n请保留这个窗口。关闭窗口或按 Ctrl+C 可以停止。\n`);
+  console.log(`\n校园岛已启动：${openUrl}\n请保留这个窗口。关闭窗口或按 Ctrl+C 可以停止。\n`);
+  if(process.env.OPEN_ADMIN === '1') console.log('管理口令保存在 data/admin-key.txt，复制后在页面登录。\n');
   if (lan) console.log(`手机访问：${url}\n手机与电脑需连接同一 Wi-Fi。若无法访问，可让电脑连接手机热点后重启此入口。\n此模式使用共享演示账号，请只用于可信网络中的演示。\n`);
   if (process.env.BROWSER === 'none') return;
   const commands = process.platform === 'win32'
-    ? ['cmd.exe', ['/d', '/s', '/c', `start "" "${url}"`]]
-    : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+    ? ['cmd.exe', ['/d', '/s', '/c', `start "" "${openUrl}"`]]
+    : process.platform === 'darwin' ? ['open', [openUrl]] : ['xdg-open', [openUrl]];
   const child = spawn(commands[0], commands[1], { windowsHide: true, stdio: 'ignore' });
   child.on('error', () => console.log('请在浏览器手动打开上面的地址。'));
   child.unref();

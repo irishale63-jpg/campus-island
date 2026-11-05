@@ -30,7 +30,8 @@ export function createDomain(getStore, save = () => {}) {
     const { responses, messages, events, thanks, cancelRequestedBy, ...summary } = task;
     const participant = userId && (task.ownerId === userId || task.helperId === userId);
     const own = responses.find(r => r.userId === userId && r.state !== 'withdrawn');
-    const result = { ...summary, completedAt: task.completedAt || events.find(ev=>ev.text==='发起人确认互助完成')?.at || null, owner: user(task.ownerId), helper: user(task.helperId),
+    const ownerUser=user(task.ownerId),helperUser=user(task.helperId);
+    const result = { ...summary,isDemo:!!(task.isDemo||ownerUser?.isDemo||helperUser?.isDemo),isExperience:!!(task.isExperience||ownerUser?.isExperience||helperUser?.isExperience), completedAt: task.completedAt || events.find(ev=>ev.text==='发起人确认互助完成')?.at || null, owner: ownerUser, helper: helperUser,
       responseCount: responses.filter(r => r.state === 'pending').length,
       myResponse: own ? { ...own } : null };
     if (detail) {

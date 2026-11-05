@@ -7,11 +7,26 @@ import { createDomain, must } from './lib/domain.mjs';
 import { ensureIslandState } from './lib/identity.mjs';
 import { createApplication, securityHeaders, MAX_IMAGE_BYTES } from './lib/application.mjs';
 import { launchAddress } from './lib/local-address.mjs';
+import { randomBytes } from 'node:crypto';
+import { createSchoolVerification,emailDeliveryFromEnv } from './lib/verification.mjs';
+import { createEmailAuth } from './lib/email-auth.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
-export function createApp({dataFile=resolve(ROOT,'..','data/store.json'),demo=true}={}) {
+export function createApp({dataFile=resolve(ROOT,'..','data/store.json'),demo=true,adminKey,verification,emailAuth}={}) {
   mkdirSync(dirname(dataFile),{recursive:true});
+  const keyFile=resolve(dirname(dataFile),'admin-key.txt');
+  if(adminKey===undefined) {
+    if(!existsSync(keyFile))writeFileSync(keyFile,randomBytes(32).toString('base64url'),'utf8');
+    adminKey=readFileSync(keyFile,'utf8').trim();
+  }
   let store=ensureIslandState(existsSync(dataFile)?JSON.parse(readFileSync(dataFile,'utf8')):seedData());
-  const save=()=>{const temp=dataFile+'.tmp';writeFileSync(temp,JSON.stringify(store,null,2),'utf8');renameSync(temp,dataFile);};
+  const save=()=>{
+    const temp=dataFile+'.tmp';writeFileSync(temp,JSON.stringify(store,null,2),'utf8');
+    // Windows file scanners can briefly lock an otherwise valid atomic replacement.
+    for(let attempt=0;;attempt++)try{renameSync(temp,dataFile);break;}catch(error){
+      if(attempt>=5||!['EPERM','EBUSY','EACCES'].includes(error.code))throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,20*(attempt+1));
+    }
+  };
   save();let queue=Promise.resolve();
   const transact=operation=>{
     const run=queue.then(()=>{
@@ -22,7 +37,7 @@ export function createApp({dataFile=resolve(ROOT,'..','data/store.json'),demo=tr
   };
   const uploadDir=resolve(dirname(dataFile),'uploads');
   const imagePath=key=>{must(/^private\/[a-f0-9-]{36}$/.test(key),'图片不存在',404);return resolve(uploadDir,key.slice(8));};
-  const api=createApplication({transact,demo,sessions:{
+  const api=createApplication({transact,demo,adminKey,emailAuth:emailAuth||createEmailAuth({secret:process.env.VERIFICATION_SECRET||adminKey,delivery:emailDeliveryFromEnv(process.env)}),verification:verification||createSchoolVerification({secret:process.env.VERIFICATION_SECRET||adminKey,delivery:emailDeliveryFromEnv(process.env)}),sessions:{
     get:token=>transact(s=>s.sessions?.[token]||null),
     set:(token,session)=>transact(s=>{s.sessions ||= {};s.sessions[token]=session;for(const [key,value] of Object.entries(s.sessions))if(value.until<=Date.now())delete s.sessions[key];}),
     delete:token=>transact(s=>{if(s.sessions)delete s.sessions[token];}),
@@ -31,7 +46,8 @@ export function createApp({dataFile=resolve(ROOT,'..','data/store.json'),demo=tr
     get:async key=>existsSync(imagePath(key))?{body:readFileSync(imagePath(key))}:null,
     delete:async key=>{if(existsSync(imagePath(key)))unlinkSync(imagePath(key));},
   }});
-  const files={'/':['index.html','text/html'],'/styles.css':['styles.css','text/css'],'/app.js':['app.js','text/javascript'],'/account.js':['account.js','text/javascript'],'/messages.js':['messages.js','text/javascript'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/brand-island.png':['brand-island.png','image/png']};
+  const files={'/admin':['admin.html','text/html'],'/admin/':['admin.html','text/html'],'/admin.js':['admin.js','text/javascript'],'/admin.css':['admin.css','text/css'],'/':['index.html','text/html'],'/styles.css':['styles.css','text/css'],'/design.css':['design.css','text/css'],'/brand.js':['brand.js','text/javascript'],'/app.js':['app.js','text/javascript'],'/account.js':['account.js','text/javascript'],'/messages.js':['messages.js','text/javascript'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/brand-island.png':['brand-island.png','image/png']};
+  files['/theme.js']=['theme.js','text/javascript'];files['/theme.css']=['theme.css','text/css'];files['/email-login.js']=['email-login.js','text/javascript'];
   return http.createServer(async(req,res)=>{
     for(const [key,value] of Object.entries(securityHeaders))res.setHeader(key,value);
     try {

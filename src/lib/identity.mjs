@@ -1,16 +1,14 @@
 import { randomBytes, randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 import { accounts, ensureDemoExamples } from './seed.mjs';
-
-export const schools = [
-  {id:'whu',name:'武汉大学',aliases:'武大 WHU'},
-  {id:'hust',name:'华中科技大学',aliases:'华科 华科大 HUST'},
-  {id:'cug',name:'中国地质大学（武汉）',aliases:'地大 武汉地大 CUG'},
-  {id:'whut',name:'武汉理工大学',aliases:'武理 武汉理工 WHUT'},
-  {id:'hzau',name:'华中农业大学',aliases:'华农 HZAU'},
-  {id:'ccnu',name:'华中师范大学',aliases:'华师 CCNU'},
-  {id:'zuel',name:'中南财经政法大学',aliases:'中南财大 中南大 财大 ZUEL'},
-];
+import { schools } from './schools.mjs';
+export { schools };
 export const avatars = ['island','leaf','moon','cat','book','star'];
+export const usernameKey = value => String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+export const usernameAvailable = (store,name,exceptId) => !store.users.some(u=>u.id!==exceptId&&usernameKey(u.name)===usernameKey(name));
+export function defaultUsername(store){
+  if(usernameAvailable(store,'新同学'))return '新同学';
+  for(let i=2;i<=store.users.length+2;i++){const name='新同学'+i;if(usernameAvailable(store,name))return name;}
+}
 export const hashRecovery = value => createHash('sha256').update(value).digest('hex');
 export function recoveryMatches(value, hash) {
   if (typeof value !== 'string' || value.length > 100 || typeof hash !== 'string' || hash.length !== 64) return false;
@@ -23,9 +21,11 @@ export function createIdentity(name, avatar) {
 }
 export function publicUser(user) {
   if (!user) return null;
-  const {id,name,initial,avatar,color,bio,skills,offers,isDemo,schoolId,schoolStatus,circleMode,createdAt} = user;
+  const {id,name,initial,avatar,color,bio,skills,offers,isDemo,isSample,isExperience,schoolId,schoolStatus,circleMode,createdAt} = user;
   return {id,name,initial:initial || name?.slice(0,1),avatar:avatar || 'island',color:color || 'lavender',bio:bio || '',skills:skills || '',offers:offers || '',
-    isDemo:!!isDemo,schoolId:schoolId || null,schoolName:schools.find(s=>s.id===schoolId)?.name || null,
+    avatarUrl:avatar==='photo'&&user.avatarPhoto?.id?'/api/avatars/'+user.avatarPhoto.id:null,
+    schoolVerifiedAt:schoolStatus==='email_verified'?user.schoolVerifiedAt||null:null,
+    isDemo:!!isDemo,isSample:!!isSample,isExperience:!!isExperience,schoolId:schoolId || null,schoolName:schools.find(s=>s.id===schoolId)?.name || null,
     schoolStatus:schoolStatus || 'unverified',circleMode:circleMode || null,createdAt};
 }
 export function ensureIslandState(store) {
@@ -47,6 +47,6 @@ export const findUser = (store,id) => store.users?.find(u=>u.id===id);
 export function scopeFor(user) {
   if (!user) return {schoolId:'ccnu',circleMode:'demo'};
   if (!user.schoolId || !['demo','email_verified'].includes(user.schoolStatus)) return null;
-  return {schoolId:user.schoolId,circleMode:user.schoolStatus==='email_verified'?'verified':'demo'};
+  return {schoolId:user.schoolId,circleMode:user.circleMode||(user.schoolStatus==='email_verified'?'verified':'demo')};
 }
 export const sameScope = (item,scope) => !!scope && item.schoolId===scope.schoolId && item.circleMode===scope.circleMode;

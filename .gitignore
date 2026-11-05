@@ -13,3 +13,15 @@ test-results/
 # Local planning archive and hosting maintenance utility
 /本机资料/
 /scripts/sync-cloud.mjs
+
+# Local operation notes, review queues and roadshow material
+/tmp/
+/config/
+/scripts/
+/路演准备/
+/后台使用说明.txt
+/启动管理后台.cmd
+/学校邮箱认证开通指南.md
+/学校邮箱认证扩展进度.md
+.env.*
+!.env.example

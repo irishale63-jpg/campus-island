@@ -1,8 +1,8 @@
 {
   "name": "campus-island",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "校园岛 校园互助比赛演示版",
+  "description": "校园岛：面向同校同学的轻量互助平台",
   "type": "module",
   "engines": {
     "node": ">=24"
